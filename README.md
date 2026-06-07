@@ -14,24 +14,23 @@ A modern, fast, and intuitive driver manager for Parch Linux and other Arch-base
 
 ## ✨ Features
 
-- **🖥️ Automatic Hardware Detection:** Scans `lspci` to detect GPUs, Network cards, Audio devices, and Bluetooth controllers automatically.
-- **📦 Driver Management:** Install and remove driver profiles seamlessly using `pacman` with `pkexec` for secure privilege escalation.
-- **⚙️ Hardware Control:** Enable or disable specific hardware modules on the fly using `modprobe` and kernel blacklisting.
-- **🎨 Modern UI:** Built entirely with GTK4 and Libadwaita, featuring a responsive split-view design, smooth transitions, and standard window controls.
-- **📋 Operation Logging:** Real-time background logging for all operations (installs, removals, errors) to help with troubleshooting.
-- **🕵️ System Info:** Displays crucial system information like Session Type (X11/Wayland), Hybrid GPU status, and Secure Boot state.
+**🖥️ Automatic Hardware Detection:** Scans `lspci` to detect GPUs, Network cards, Audio devices, and Bluetooth controllers automatically.
+
+**📦 Driver Management:** Install and remove driver profiles seamlessly using `pacman` with `pkexec` for secure privilege escalation.
+
+**⚙️ Hardware Control:** Enable or disable specific hardware modules on the fly using `modprobe` and kernel blacklisting.
+
+**🎨 Modern UI:** Built entirely with GTK4 and Libadwaita, featuring a responsive split-view design, smooth transitions, and standard window controls.
+
+**📋 Operation Logging:** Real-time background logging for all operations (installs, removals, errors) to help with troubleshooting.
+
+**🕵️ System Info:** Displays crucial system information like Session Type (X11/Wayland), Hybrid GPU status, and Secure Boot state.
 
 ---
 
 ## 📋 Prerequisites
 
-Before running Parch Driver Manager, ensure you have the following system dependencies installed:
-
-- **Python 3** (>= 3.9)
-- **GTK4** & **Libadwaita**
-- **Polkit** (for `pkexec` privilege escalation)
-- `pacman` (Arch Linux package manager)
-- `lspci` (usually part of `pciutils`)
+Before running Parch Driver Manager, ensure you have the following system dependencies installed: **Python 3** (>= 3.9), **GTK4** & **Libadwaita**, **Polkit** (for `pkexec` privilege escalation), `pacman` (Arch Linux package manager), and `lspci` (usually part of `pciutils`).
 
 ---
 
@@ -48,7 +47,7 @@ sudo pacman -S gtk4 libadwaita python-gobject pciutils polkit
 ### 2. Clone the Repository
 
 ```bash
-git clone [https://github.com/your-username/parch-driver-manager.git](https://github.com/parchlinux/Parch-Driver-Manager/)
+git clone https://github.com/parchlinux/Parch-Driver-Manager/
 cd Parch-driver-manager
 ```
 
@@ -70,7 +69,7 @@ Run the application using the main entry point:
 python main.py
 ```
 
-*Note: Since the application uses `pkexec` for package management and module loading, you will be prompted for your administrator password when performing system-altering actions.*
+Note: Since the application uses `pkexec` for package management and module loading, you will be prompted for your administrator password when performing system-altering actions.
 
 ---
 
@@ -102,7 +101,7 @@ The project follows a modular architecture to separate concerns between logic, d
 
 ## 📜 License
 
-This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GPL-3.0 License, see the LICENSE file for details.
 
 <div align="center">
   Made with ❤️ for Parch Linux
