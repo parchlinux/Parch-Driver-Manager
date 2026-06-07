@@ -4,7 +4,6 @@
 
 A modern, fast, and intuitive driver manager for Parch Linux and other Arch-based distributions, built with **Python**, **GTK4**, and **Libadwaita**.
 
-![[Parch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white)
 ![GTK4](https://img.shields.io/badge/GTK4-3D3D3D?style=for-the-badge&logo=gtk&logoColor=white)
 ![Libadwaita](https://img.shields.io/badge/Libadwaita-3584E4?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
