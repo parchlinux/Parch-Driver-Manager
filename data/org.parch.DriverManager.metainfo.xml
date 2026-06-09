@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.parch.DriverManager</id>
+  <name>Parch Driver Manager</name>
+  <summary>Manage hardware drivers on Arch Linux</summary>
+  <description>
+    <p>
+      A modern driver management tool for Arch-based distributions built with
+      Python, GTK4, and Libadwaita. Detects GPUs, network cards, audio devices,
+      and Bluetooth controllers and provides an easy interface for installing,
+      removing, enabling, and disabling hardware drivers.
+    </p>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <url type="homepage">https://github.com/parchlinux/Parch-Driver-Manager</url>
+  <launchable type="desktop-id">org.parch.DriverManager.desktop</launchable>
+  <categories>
+    <category>System</category>
+  </categories>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window</caption>
+    </screenshot>
+  </screenshots>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+</component>

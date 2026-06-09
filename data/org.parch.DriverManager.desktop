@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Parch Driver Manager
+GenericName=Driver Manager
+Comment=Manage hardware drivers on Arch Linux
+Categories=System;Settings;HardwareSettings;
+Exec=parch-driver-manager
+Icon=org.parch.DriverManager
+Terminal=false
+StartupNotify=true
+DBusActivatable=true
+X-GNOME-UsesNotifications=true

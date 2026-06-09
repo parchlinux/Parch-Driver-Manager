@@ -1,0 +1,27 @@
+.navigation-sidebar row {
+    min-height: 40px;
+    padding: 4px 8px;
+}
+
+.navigation-sidebar row label.title {
+    font-size: 0.9em;
+}
+
+.navigation-sidebar row image {
+    margin-right: 4px;
+    opacity: 0.8;
+}
+
+.success-icon {
+    color: @success_color;
+}
+
+.warning-icon {
+    color: @warning_color;
+}
+
+.card {
+    background: @window_bg_color;
+    border-radius: 12px;
+    padding: 2px;
+}
