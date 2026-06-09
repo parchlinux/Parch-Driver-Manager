@@ -1,7 +1,11 @@
+import logging
 from typing import List, Callable, Optional
 import shlex
-from backend import BackendRunner
-from system_prober import debug_log
+
+from .backend import BackendRunner
+
+logger = logging.getLogger(__name__)
+
 
 class DriverProfile:
     def __init__(
@@ -22,6 +26,7 @@ class DriverProfile:
         self.post_install = post_install
         self.post_remove = post_remove
 
+
 class DriverProfiles:
     @staticmethod
     def get_nvidia_profiles(kernel_flavor: str) -> List[DriverProfile]:
@@ -40,7 +45,7 @@ class DriverProfiles:
             kernel_pkg = "linux"
 
         def post_install_nvidia(runner: BackendRunner):
-            debug_log("Running NVIDIA post-install steps")
+            logger.debug("Running NVIDIA post-install steps")
             blacklist_path = "/etc/modprobe.d/blacklist-nouveau.conf"
             content = "blacklist nouveau\noptions nouveau modeset=0\n"
             runner.run(
@@ -50,7 +55,7 @@ class DriverProfiles:
             runner.run(["mkinitcpio", "-P"], check=True)
 
         def post_remove_nvidia(runner: BackendRunner):
-            debug_log("Running NVIDIA post-remove steps")
+            logger.debug("Running NVIDIA post-remove steps")
             blacklist_path = "/etc/modprobe.d/blacklist-nouveau.conf"
             runner.run(["rm", "-f", blacklist_path], check=False)
             runner.run(["mkinitcpio", "-P"], check=False)
