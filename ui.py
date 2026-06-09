@@ -182,6 +182,14 @@ class MainWindow(Adw.ApplicationWindow):
         self.search_text: str = ""
         
         self.style_manager = Adw.StyleManager.get_default()
+
+        saved_theme = current_config.get('theme', 'auto')
+        if saved_theme == 'light':
+            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+        elif saved_theme == 'dark':
+            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+        else:
+            self.style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT)
         
         self._build_ui()
 
@@ -201,6 +209,12 @@ class MainWindow(Adw.ApplicationWindow):
         menu_button.set_icon_name("open-menu-symbolic")
         menu_button.set_tooltip_text(_("Settings"))
         header.pack_end(menu_button)
+        refresh_button = Gtk.Button()
+        refresh_button.set_icon_name("view-refresh-symbolic")
+        refresh_button.set_tooltip_text(_("Refresh hardware detection"))
+        refresh_button.add_css_class("flat")
+        refresh_button.connect("clicked", self.on_refresh_hardware)
+        header.pack_start(refresh_button)
 
         menu = Gio.Menu()
         
@@ -306,11 +320,18 @@ class MainWindow(Adw.ApplicationWindow):
         for idx, profile in enumerate(profiles):
             row = Adw.ActionRow(title=profile.name, subtitle=profile.description)
             row.set_activatable(True)
-            
-            chevron = Gtk.Image()
-            chevron.set_from_icon_name("go-next-symbolic")
-            row.add_suffix(chevron)
-            
+
+            installed = self._check_packages_installed(profile.packages)
+            status_icon = Gtk.Image()
+            if installed:
+                status_icon.set_from_icon_name("emblem-ok-symbolic")
+                status_icon.add_css_class("success-icon")
+                row.set_subtitle(profile.description + " — Installed")
+            else:
+                status_icon.set_from_icon_name("dialog-question-symbolic")
+                status_icon.add_css_class("warning-icon")
+            row.add_suffix(status_icon)
+
             row.connect("activated", self.on_profile_row_activated, idx, category)
             profile_listbox.append(row)
 
@@ -787,13 +808,19 @@ class MainWindow(Adw.ApplicationWindow):
 
     def on_theme_changed(self, combo_row, param):
         selected = combo_row.get_selected()
-        
         if selected == 0:
             self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+            theme_val = "light"
         elif selected == 1:
             self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+            theme_val = "dark"
         else:
             self.style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT)
+            theme_val = "auto"
+
+        config = load_config()
+        config['theme'] = theme_val
+        save_config(config)
 
     def on_clear_logs(self, button):
         buffer = self.log_view.get_buffer()
@@ -834,6 +861,35 @@ class MainWindow(Adw.ApplicationWindow):
             css_provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
+
+    def on_refresh_hardware(self, button):
+        def refresh():
+            GLib.idle_add(self._start_operation)
+            self.hardware_devices = SystemProber.get_hardware_devices()
+            self.gpu_info = SystemProber.get_gpu_info()
+            GLib.idle_add(self._end_operation)
+            GLib.idle_add(self._show_toast, "Hardware detection refreshed.")
+
+        self._run_in_thread(refresh)
+
+    def _check_packages_installed(self, packages: List[str]) -> bool:
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["pacman", "-Q"] + packages,
+                capture_output=True, text=True
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+        def refresh():
+            GLib.idle_add(self._start_operation)
+            self.hardware_devices = SystemProber.get_hardware_devices()
+            self.gpu_info = SystemProber.get_gpu_info()
+            GLib.idle_add(self._end_operation)
+            GLib.idle_add(self._show_toast, "Hardware detection refreshed.")
+
+        self._run_in_thread(refresh)
 
     def on_install_clicked(self, button: Gtk.Button, category: str = None):
         if not self.current_profile:

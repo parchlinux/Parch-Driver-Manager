@@ -64,7 +64,14 @@ class DriverProfiles:
                 module="nvidia",
                 post_install=post_install_nvidia,
                 post_remove=post_remove_nvidia,
-            )
+            ),
+            DriverProfile(
+                name="NVIDIA Open Source (Nouveau)",
+                description="Open-source Nouveau driver for NVIDIA cards",
+                packages=["mesa", "xf86-video-nouveau"],
+                category="GPU",
+                module="nouveau",
+            ),
         ]
 
     @staticmethod
@@ -116,6 +123,20 @@ class DriverProfiles:
                 description="NetworkManager with iwd backend for Wi-Fi",
                 packages=["networkmanager", "iwd"],
                 category="Network",
+            ),
+            DriverProfile(
+                name="Broadcom Wi-Fi (broadcom-wl)",
+                description="Broadcom proprietary Wi-Fi driver via DKMS",
+                packages=["broadcom-wl-dkms"],
+                category="Network",
+                module="wl",
+            ),
+            DriverProfile(
+                name="RTL8821CE Wi-Fi",
+                description="Realtek RTL8821CE driver (common in laptops)",
+                packages=["rtl8821ce-dkms-git"],
+                category="Network",
+                module="8821ce",
             ),
         ]
 
