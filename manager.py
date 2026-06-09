@@ -1,3 +1,11 @@
+import logging
+import os
+
+_log_path = os.path.expanduser("~/.local/share/parch-driver-manager/operations.log")
+os.makedirs(os.path.dirname(_log_path), exist_ok=True)
+logging.basicConfig(filename=_log_path, level=logging.INFO,
+                    format='%(asctime)s %(levelname)s: %(message)s')
+
 from typing import List, Callable, Optional
 from system_prober import SystemProber
 from backend import BackendRunner
@@ -13,17 +21,25 @@ class DriverManager:
             return []
         return out.splitlines()
 
+    def get_installed_packages(self) -> List[str]:
+        code, out, err = SystemProber.run_command(["pacman", "-Qq"])
+        if code != 0:
+            return []
+        return out.splitlines()
+
     def is_package_installed(self, pkg: str) -> bool:
         code, _, _ = SystemProber.run_command(["pacman", "-Qq", pkg])
         return code == 0
 
     def install_profile(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):
-        pkgs_to_install = [p for p in profile.packages if not self.is_package_installed(p)]
+        installed = self.get_installed_packages_set()
+        pkgs_to_install = [p for p in profile.packages if p not in installed]
         if not pkgs_to_install:
             if progress_cb: progress_cb("All packages in this profile are already installed.")
             return
 
         if progress_cb: progress_cb(f"Installing: {' '.join(pkgs_to_install)}")
+        logging.info(f"Installing packages: {pkgs_to_install}")
         self.backend.run(["pacman", "-S", "--needed", "--noconfirm"] + pkgs_to_install, check=True)
 
         if profile.post_install:
@@ -31,12 +47,14 @@ class DriverManager:
             profile.post_install(self.backend)
 
     def remove_profile(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):
-        pkgs_to_remove = [p for p in profile.packages if self.is_package_installed(p)]
+        installed = self.get_installed_packages_set()
+        pkgs_to_remove = [p for p in profile.packages if p in installed]
         if not pkgs_to_remove:
             if progress_cb: progress_cb("None of the packages in this profile are installed.")
             return
 
         if progress_cb: progress_cb(f"Removing: {' '.join(pkgs_to_remove)}")
+        logging.info(f"Removing packages: {pkgs_to_remove}")
         self.backend.run(["pacman", "-Rns", "--noconfirm"] + pkgs_to_remove, check=True)
 
         if profile.post_remove:
