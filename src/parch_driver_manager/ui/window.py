@@ -22,7 +22,7 @@ from .widgets import LogBuffer
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
         try:
-            self.settings = Gio.Settings.new("org.parch.driver-manager")
+            self.settings = Gio.Settings.new("com.parchlinux.driver-manager")
         except GLib.Error:
             self.settings = None
         super().__init__(application=app)

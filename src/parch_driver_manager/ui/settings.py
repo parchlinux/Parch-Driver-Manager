@@ -3,7 +3,7 @@ import locale
 import os
 from typing import Optional
 
-APP_ID = "org.parch.DriverManager"
+APP_ID = "com.parchlinux.DriverManager"
 DOMAIN = "parch-driver-manager"
 
 

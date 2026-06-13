@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Parch Driver Manager 1.0.0\n"
+"Project-Id-Version: Parch Driver Manager 1.0.1\n"
 "Report-Msgid-Bugs-To: https://github.com/parchlinux/Parch-Driver-Manager/issues\n"
 "POT-Creation-Date: 2026-06-09 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

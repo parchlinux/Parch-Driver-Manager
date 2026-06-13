@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema path="/org/parch/driver-manager/" id="org.parch.driver-manager">
+  <schema path="/com/parchlinux/driver-manager/" id="com.parchlinux.driver-manager">
     <key name="language" type="s">
       <default>'en'</default>
       <summary>Application language</summary>

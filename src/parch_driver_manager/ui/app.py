@@ -43,8 +43,8 @@ class ParchDriverManagerApp(Adw.Application):
         about = Adw.AboutWindow(
             transient_for=win,
             application_name=_("Parch Driver Manager"),
-            application_icon="org.parch.DriverManager",
-            version="1.0.0",
+            application_icon="com.parchlinux.DriverManager",
+            version="1.0.1",
             developer_name="Parch Linux",
             copyright="\u00a9 2026 Parch Linux",
             license_type=Gtk.License.GPL_3_0,

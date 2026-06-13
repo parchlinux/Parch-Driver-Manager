@@ -1,5 +1,5 @@
-__version__ = "1.0.0"
-__app_id__ = "org.parch.DriverManager"
+__version__ = "1.0.1"
+__app_id__ = "com.parchlinux.DriverManager"
 
 from .system_prober import SystemProber, CommandError
 from .backend import BackendRunner
