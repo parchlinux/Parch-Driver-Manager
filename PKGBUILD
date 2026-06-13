@@ -11,7 +11,7 @@ url="https://github.com/parchlinux/Parch-Driver-Manager"
 license=('GPL-3.0-only')
 depends=(
     'python'
-    'python-pygobject'
+    'python-gobject'
     'gtk4'
     'libadwaita'
     'glib2'
@@ -28,7 +28,7 @@ optdepends=(
     'sudo: alternative privilege escalation'
     'doas: alternative privilege escalation'
 )
-source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/${pkgver}.tar.gz")
 sha256sums=('SKIP')
 
 build() {
