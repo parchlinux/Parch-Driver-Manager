@@ -1,197 +1,78 @@
+import logging
+import os
+import threading
+from typing import List, Optional, Callable
+
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib, Gio
-import locale
-import os
-import json
-import threading
-from typing import List, Optional, Callable
 
-from system_prober import SystemProber, CommandError, debug_log
-from backend import BackendRunner
-from manager import DriverManager
-from profiles import DriverProfiles, DriverProfile
+logger = logging.getLogger(__name__)
 
-APP_ID = "org.parch.DriverManager"
-CONFIG_DIR = os.path.expanduser("~/.config/parch-driver-manager")
-CONFIG_FILE = os.path.join(CONFIG_DIR, "settings.json")
+from ..system_prober import SystemProber, CommandError
+from ..backend import BackendRunner
+from ..manager import DriverManager
+from ..profiles import DriverProfiles, DriverProfile
 
-try:
-    locale.setlocale(locale.LC_ALL, '')
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_ALL, 'C.UTF-8')
-    except locale.Error:
-        locale.setlocale(locale.LC_ALL, 'C')
+from .settings import _, is_rtl
+from .widgets import LogBuffer
 
-translations = {
-    'en': {},
-    'fa': {
-        'Parch Driver Manager': 'مدیریت درایورهای پارچ',
-        'Hardware & Drivers': 'سخت‌افزار و درایورها',
-        'GPU': 'کارت گرافیک',
-        'Network': 'شبکه',
-        'Audio': 'صدا',
-        'Bluetooth': 'بلوتوث',
-        'System Info': 'اطلاعات سیستم',
-        'Logs': 'گزارشات',
-        'Select a Category': 'یک دسته انتخاب کنید',
-        'Detected Graphics Cards': 'کارت‌های گرافیک شناسایی شده',
-        'Recommended Driver Profiles': 'پروفایل‌های درایور پیشنهادی',
-        'Install Driver': 'نصب درایور',
-        'Remove Driver': 'حذف درایور',
-        'Disable Hardware': 'غیرفعال کردن سخت‌افزار',
-        'Enable Hardware': 'فعال کردن سخت‌افزار',
-        'No GPU detected': 'کارت گرافیک یافت نشد',
-        'Detected Network Devices': 'دستگاه‌های شبکه شناسایی شده',
-        'No Network devices detected': 'دستگاه شبکه‌ای یافت نشد',
-        'Detected Audio Devices': 'دستگاه‌های صوتی شناسایی شده',
-        'No Audio devices detected': 'دستگاه صوتی یافت نشد',
-        'Detected Bluetooth Devices': 'دستگاه‌های بلوتوث شناسایی شده',
-        'No Bluetooth devices detected': 'دستگاه بلوتوث یافت نشد',
-        'System information': 'اطلاعات سیستم',
-        'GPU Vendor': 'سازنده کارت گرافیک',
-        'Session Type': 'نوع نشست',
-        'Hybrid Graphics': 'گرافیک ترکیبی',
-        'Secure Boot': 'بوت امن',
-        'Enabled': 'فعال',
-        'Disabled': 'غیرفعال',
-        'Operation log': 'گزارش عملیات',
-        'No profile selected.': 'پروفایلی انتخاب نشده است.',
-        'Profile installed successfully.': 'پروفایل با موفقیت نصب شد.',
-        'Profile removed successfully.': 'پروفایل با موفقیت حذف شد.',
-        'Hardware disabled. Reboot might be required.': 'سخت‌افزار غیرفعال شد. ممکن است ریبوت نیاز باشد.',
-        'Hardware enabled.': 'سخت‌افزار فعال شد.',
-        'Driver': 'درایور',
-        'None': 'ندارد',
-        'Search drivers...': 'جستجوی درایورها...',
-        'Clear': 'پاک کردن',
-        'OK': 'باشه',
-        'Language Changed': 'زبان تغییر کرد',
-        'Please restart the application to apply changes': 'لطفا برنامه را مجددا باز کنید',
-        'Install': 'نصب',
-        'Remove': 'حذف',
-        'Enable': 'فعال',
-        'Disable': 'غیرفعال',
-        'Detected Hardware': 'سخت‌افزار شناسایی شده',
-        'Available Drivers': 'درایورهای موجود',
-        'Kernel': 'کرنل',
-        'Processor': 'پردازنده',
-        'Memory': 'حافظه',
-        'Device': 'دستگاه',
-        'Operating System': 'سیستم‌عامل',
-        'Hostname': 'نام میزبان',
-        'Display Server': 'سرور نمایش',
-        'Hardware': 'سخت‌افزار',
-        'System': 'سیستم',
-        'Features': 'ویژگی‌ها',
-        'Cancel': 'لغو',
-        'Confirm': 'تایید',
-        'Are you sure?': 'آیا مطمئن هستید؟',
-        'This action will install the driver packages.': 'این عملیات پکیج‌های درایور را نصب می‌کند.',
-        'This action will remove the driver packages.': 'این عملیات پکیج‌های درایور را حذف می‌کند.',
-        'This action will disable the hardware module.': 'این عملیات ماژول سخت‌افزاری را غیرفعال می‌کند.',
-        'Language': 'زبان',
-        'Theme': 'تم',
-        'English': 'English',
-        'Persian': 'فارسی',
-        'Light': 'روشن',
-        'Dark': 'تیره',
-        'Auto': 'خودکار',
-        'Settings': 'تنظیمات',
-        'Appearance': 'ظاهر',
-        'Operation in progress...': 'در حال انجام عملیات...',
-        'Unknown': 'نامشخص',
-        'This profile has no associated kernel module to disable.': 'این پروفایل ماژول کرنل ندارد.',
-        'This profile has no associated kernel module to enable.': 'این پروفایل ماژول کرنل ندارد.',
-        'Starting installation': 'شروع نصب',
-        'Profile installation finished.': 'نصب پروفایل به پایان رسید.',
-        'Starting removal': 'شروع حذف',
-        'Profile removal finished.': 'حذف پروفایل به پایان رسید.',
-        'Disabling hardware module': 'غیرفعال کردن ماژول سخت‌افزاری',
-        'Enabling hardware module': 'فعال کردن ماژول سخت‌افزاری',
-        'Operation failed. See log for details.': 'عملیات ناموفق بود. گزارشات را ببینید.',
-        'Unexpected error. See log for details.': 'خطای غیرمنتظره. گزارشات را ببینید.',
-        'Please restart the application to apply language changes': 'لطفا برنامه را مجددا باز کنید تا تغییرات اعمال شود',
-        'Hardware detected on your system': 'سخت‌افزار شناسایی شده در سیستم شما',
-        'Network interfaces on your system': 'رابط‌های شبکه در سیستم شما',
-        'Audio devices on your system': 'دستگاه‌های صوتی در سیستم شما',
-        'Bluetooth adapters on your system': 'آداپترهای بلوتوث در سیستم شما',
-        'Configuration and hardware status': 'پیکربندی و وضعیت سخت‌افزار'
-    }
-}
-
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, 'r') as f:
-                return json.load(f)
-        except:
-            pass
-    return {'language': 'en'}
-
-def save_config(config):
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    try:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config, f)
-    except:
-        pass
-
-current_config = load_config()
-current_language = current_config.get('language', 'en')
-
-def _(text: str) -> str:
-    return translations.get(current_language, {}).get(text, text)
-
-class LogBuffer:
-    def __init__(self, textview: Gtk.TextView):
-        self.textview = textview
-        self.buffer = textview.get_buffer()
-
-    def append(self, text: str):
-        def _append():
-            end_iter = self.buffer.get_end_iter()
-            self.buffer.insert(end_iter, text + "\n")
-            mark = self.buffer.create_mark(None, self.buffer.get_end_iter(), False)
-            self.textview.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
-        GLib.idle_add(_append)
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application):
+        try:
+            self.settings = Gio.Settings.new("org.parch.driver-manager")
+        except GLib.Error:
+            self.settings = None
         super().__init__(application=app)
         self.set_title(_("Parch Driver Manager"))
-        self.set_default_size(1200, 750)
 
-        self.backend = BackendRunner()
+        if self.settings:
+            saved_w = self.settings.get_int("window-width")
+            saved_h = self.settings.get_int("window-height")
+            self.set_default_size(saved_w, saved_h)
+            if self.settings.get_boolean("window-maximized"):
+                self.maximize()
+        else:
+            self.set_default_size(1200, 750)
+
+        backend_env = os.environ.get("PARCH_DM_BACKEND", "pkexec")
+        use_pkexec = backend_env not in ("none", "sudo", "doas")
+        self.backend = BackendRunner(use_pkexec=use_pkexec)
         self.manager = DriverManager(self.backend)
 
+        self.hardware_devices = SystemProber.get_hardware_devices()
         self.gpu_info = SystemProber.get_gpu_info()
-        self.session_type = SystemProber.get_session_type()
         self.hybrid = SystemProber.is_hybrid_graphics()
         self.secure_boot = SystemProber.has_secure_boot()
-        self.hardware_devices = SystemProber.get_hardware_devices()
         self.kernel_info = SystemProber.get_kernel_info()
         self.system_info = SystemProber.get_system_info()
+        self.session_type = SystemProber.get_session_type()
 
         self.current_profile: Optional[DriverProfile] = None
         self.profiles: List[DriverProfile] = []
         self.kernel_flavor = self.kernel_info.get('flavor', 'default')
         self.current_operation: Optional[threading.Thread] = None
         self.search_text: str = ""
-        
-        self.style_manager = Adw.StyleManager.get_default()
 
-        saved_theme = current_config.get('theme', 'auto')
-        if saved_theme == 'light':
-            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
-        elif saved_theme == 'dark':
-            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
-        else:
-            self.style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT)
-        
+        if is_rtl():
+            self.set_direction(Gtk.TextDirection.RTL)
+
         self._build_ui()
+        self._connect_window_state()
+
+    def _connect_window_state(self):
+        if not self.settings:
+            return
+
+        def on_close(widget, *args):
+            if not self.is_maximized():
+                self.settings.set_int("window-width", self.get_width())
+                self.settings.set_int("window-height", self.get_height())
+            self.settings.set_boolean("window-maximized", self.is_maximized())
+            return False
+        self.connect("close-request", on_close)
 
     def _build_ui(self):
         self.toast_overlay = Adw.ToastOverlay()
@@ -207,7 +88,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu_button = Gtk.MenuButton()
         menu_button.set_icon_name("open-menu-symbolic")
-        menu_button.set_tooltip_text(_("Settings"))
+        menu_button.set_tooltip_text(_("Menu"))
         header.pack_end(menu_button)
         refresh_button = Gtk.Button()
         refresh_button.set_icon_name("view-refresh-symbolic")
@@ -217,17 +98,31 @@ class MainWindow(Adw.ApplicationWindow):
         header.pack_start(refresh_button)
 
         menu = Gio.Menu()
-        
-        appearance_section = Gio.Menu()
-        appearance_section.append(_("Settings"), "app.settings")
-        menu.append_section(None, appearance_section)
-        
+
+        app_section = Gio.Menu()
+        app_section.append(_("Keyboard Shortcuts"), "app.shortcuts")
+        menu.append_section(None, app_section)
+
+        help_section = Gio.Menu()
+        help_section.append(_("About"), "app.about")
+        menu.append_section(None, help_section)
+
+        quit_section = Gio.Menu()
+        quit_section.append(_("Quit"), "app.quit")
+        menu.append_section(None, quit_section)
+
         menu_button.set_menu_model(menu)
 
         self.split_view = Adw.NavigationSplitView()
         self.split_view.set_show_content(True)
         self.split_view.set_vexpand(True)
+        self.split_view.set_min_sidebar_width(200)
+        self.split_view.set_max_sidebar_width(280)
         main_box.append(self.split_view)
+
+        bp = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 700px"))
+        bp.add_setter(self.split_view, "collapsed", True)
+        self.add_breakpoint(bp)
 
         sidebar_page = Adw.NavigationPage(title=_("Categories"))
         self.split_view.set_sidebar(sidebar_page)
@@ -258,7 +153,7 @@ class MainWindow(Adw.ApplicationWindow):
             (_("System Info"), "preferences-system-symbolic"),
             (_("Logs"), "text-x-generic-symbolic")
         ]
-        
+
         for cat, icon in categories:
             row = Adw.ActionRow(title=cat)
             row.set_icon_name(icon)
@@ -286,7 +181,7 @@ class MainWindow(Adw.ApplicationWindow):
         stack_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         stack_box.set_vexpand(True)
         content_box.append(stack_box)
-        
+
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self.stack.set_transition_duration(300)
@@ -302,12 +197,16 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_logs_page()
 
         GLib.idle_add(self.sidebar_list.select_row, self.sidebar_list.get_row_at_index(0))
-        
+
+        refresh_action = Gio.SimpleAction.new("refresh", None)
+        refresh_action.connect("activate", lambda *_: self.on_refresh_hardware(None))
+        self.add_action(refresh_action)
+
         self._load_css()
 
     def _create_profile_widgets(self, profiles: List[DriverProfile], category: str) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        
+
         profiles_group = Adw.PreferencesGroup(title=_("Available Drivers"))
         box.append(profiles_group)
 
@@ -326,7 +225,7 @@ class MainWindow(Adw.ApplicationWindow):
             if installed:
                 status_icon.set_from_icon_name("emblem-ok-symbolic")
                 status_icon.add_css_class("success-icon")
-                row.set_subtitle(profile.description + " — Installed")
+                row.set_subtitle(profile.description + " \u2014 Installed")
             else:
                 status_icon.set_from_icon_name("dialog-question-symbolic")
                 status_icon.add_css_class("warning-icon")
@@ -368,7 +267,7 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
-        
+
         clamp = Adw.Clamp()
         clamp.set_maximum_size(900)
         clamp.set_margin_top(24)
@@ -376,14 +275,14 @@ class MainWindow(Adw.ApplicationWindow):
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
-        
+
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
         hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
         main_box.append(hw_group)
-        
+
         hw_list = Gtk.ListBox()
         hw_list.add_css_class("boxed-list")
         hw_group.add(hw_list)
@@ -394,7 +293,7 @@ class MainWindow(Adw.ApplicationWindow):
                 driver_text = gpu['driver'] if gpu['driver'] else _('None')
                 sub = f"{_('Driver')}: {driver_text}"
                 row = Adw.ActionRow(title=gpu['name'], subtitle=sub)
-                
+
                 status_badge = Gtk.Image()
                 status_badge.set_from_icon_name("media-record-symbolic")
                 status_badge.set_pixel_size(10)
@@ -403,16 +302,20 @@ class MainWindow(Adw.ApplicationWindow):
                 else:
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-                
+
                 hw_list.append(row)
         else:
-            row = Adw.ActionRow(title=_("No GPU detected"))
-            row.set_sensitive(False)
-            hw_list.append(row)
+            hw_group.set_visible(False)
+            status_page = Adw.StatusPage()
+            status_page.set_title(_("No GPU detected"))
+            status_page.set_icon_name("video-display-symbolic")
+            status_page.set_vexpand(True)
+            status_page.set_hexpand(True)
+            main_box.append(status_page)
 
         self.gpu_profiles = DriverProfiles.get_gpu_profiles(self.gpu_info.get("vendor", "Unknown"), self.kernel_flavor)
         main_box.append(self._create_profile_widgets(self.gpu_profiles, "GPU"))
-        
+
         self.stack.add_named(scrolled, _("GPU"))
 
     def _build_network_page(self):
@@ -420,7 +323,7 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
-        
+
         clamp = Adw.Clamp()
         clamp.set_maximum_size(900)
         clamp.set_margin_top(24)
@@ -428,14 +331,14 @@ class MainWindow(Adw.ApplicationWindow):
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
-        
+
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
         hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
         main_box.append(hw_group)
-        
+
         hw_list = Gtk.ListBox()
         hw_list.add_css_class("boxed-list")
         hw_group.add(hw_list)
@@ -446,7 +349,7 @@ class MainWindow(Adw.ApplicationWindow):
                 driver_text = net['driver'] if net['driver'] else _('None')
                 sub = f"{_('Driver')}: {driver_text}"
                 row = Adw.ActionRow(title=net['name'], subtitle=sub)
-                
+
                 status_badge = Gtk.Image()
                 status_badge.set_from_icon_name("media-record-symbolic")
                 status_badge.set_pixel_size(10)
@@ -455,12 +358,16 @@ class MainWindow(Adw.ApplicationWindow):
                 else:
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-                
+
                 hw_list.append(row)
         else:
-            row = Adw.ActionRow(title=_("No Network devices detected"))
-            row.set_sensitive(False)
-            hw_list.append(row)
+            hw_group.set_visible(False)
+            status_page = Adw.StatusPage()
+            status_page.set_title(_("No Network devices detected"))
+            status_page.set_icon_name("network-wireless-symbolic")
+            status_page.set_vexpand(True)
+            status_page.set_hexpand(True)
+            main_box.append(status_page)
 
         self.net_profiles = DriverProfiles.get_network_profiles()
         main_box.append(self._create_profile_widgets(self.net_profiles, "Network"))
@@ -471,7 +378,7 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
-        
+
         clamp = Adw.Clamp()
         clamp.set_maximum_size(900)
         clamp.set_margin_top(24)
@@ -479,14 +386,14 @@ class MainWindow(Adw.ApplicationWindow):
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
-        
+
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
         hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
         main_box.append(hw_group)
-        
+
         hw_list = Gtk.ListBox()
         hw_list.add_css_class("boxed-list")
         hw_group.add(hw_list)
@@ -497,7 +404,7 @@ class MainWindow(Adw.ApplicationWindow):
                 driver_text = aud['driver'] if aud['driver'] else _('None')
                 sub = f"{_('Driver')}: {driver_text}"
                 row = Adw.ActionRow(title=aud['name'], subtitle=sub)
-                
+
                 status_badge = Gtk.Image()
                 status_badge.set_from_icon_name("media-record-symbolic")
                 status_badge.set_pixel_size(10)
@@ -506,12 +413,16 @@ class MainWindow(Adw.ApplicationWindow):
                 else:
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-                
+
                 hw_list.append(row)
         else:
-            row = Adw.ActionRow(title=_("No Audio devices detected"))
-            row.set_sensitive(False)
-            hw_list.append(row)
+            hw_group.set_visible(False)
+            status_page = Adw.StatusPage()
+            status_page.set_title(_("No Audio devices detected"))
+            status_page.set_icon_name("audio-card-symbolic")
+            status_page.set_vexpand(True)
+            status_page.set_hexpand(True)
+            main_box.append(status_page)
 
         self.audio_profiles = DriverProfiles.get_audio_profiles()
         main_box.append(self._create_profile_widgets(self.audio_profiles, "Audio"))
@@ -522,7 +433,7 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
-        
+
         clamp = Adw.Clamp()
         clamp.set_maximum_size(900)
         clamp.set_margin_top(24)
@@ -530,14 +441,14 @@ class MainWindow(Adw.ApplicationWindow):
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
-        
+
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
         hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
         main_box.append(hw_group)
-        
+
         hw_list = Gtk.ListBox()
         hw_list.add_css_class("boxed-list")
         hw_group.add(hw_list)
@@ -547,8 +458,16 @@ class MainWindow(Adw.ApplicationWindow):
             for bt in bts:
                 driver_text = bt['driver'] if bt['driver'] else _('None')
                 sub = f"{_('Driver')}: {driver_text}"
+
+                if bt.get('service_active') is False:
+                    sub += f" | {_('No Bluetooth service running')}"
+                elif bt.get('rfkill_status') == "soft-blocked":
+                    sub += f" | {_('Bluetooth is soft-blocked')}"
+                elif bt.get('rfkill_status') == "hard-blocked":
+                    sub += f" | {_('Bluetooth is hard-blocked')}"
+
                 row = Adw.ActionRow(title=bt['name'], subtitle=sub)
-                
+
                 status_badge = Gtk.Image()
                 status_badge.set_from_icon_name("media-record-symbolic")
                 status_badge.set_pixel_size(10)
@@ -557,12 +476,16 @@ class MainWindow(Adw.ApplicationWindow):
                 else:
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-                
+
                 hw_list.append(row)
         else:
-            row = Adw.ActionRow(title=_("No Bluetooth devices detected"))
-            row.set_sensitive(False)
-            hw_list.append(row)
+            hw_group.set_visible(False)
+            status_page = Adw.StatusPage()
+            status_page.set_title(_("No Bluetooth devices detected"))
+            status_page.set_icon_name("bluetooth-symbolic")
+            status_page.set_vexpand(True)
+            status_page.set_hexpand(True)
+            main_box.append(status_page)
 
         self.bt_profiles = DriverProfiles.get_bluetooth_profiles()
         main_box.append(self._create_profile_widgets(self.bt_profiles, "Bluetooth"))
@@ -573,7 +496,7 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
-        
+
         clamp = Adw.Clamp()
         clamp.set_maximum_size(900)
         clamp.set_margin_top(24)
@@ -581,14 +504,14 @@ class MainWindow(Adw.ApplicationWindow):
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
-        
+
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
         box.set_vexpand(False)
         clamp.set_child(box)
 
         info_group = Adw.PreferencesGroup(title=_("Hardware"))
         box.append(info_group)
-        
+
         cpu_row = Adw.ActionRow(title=_("Processor"))
         cpu_row.set_subtitle(self.system_info.get("cpu", "Unknown"))
         info_group.add(cpu_row)
@@ -599,28 +522,28 @@ class MainWindow(Adw.ApplicationWindow):
             gpu_text = f"{gpu_text} - {self.gpu_info.get('model')}"
         vendor_row.set_subtitle(gpu_text)
         info_group.add(vendor_row)
-        
+
         memory_row = Adw.ActionRow(title=_("Memory"))
         memory_row.set_subtitle(self.system_info.get("memory", "Unknown"))
         info_group.add(memory_row)
 
         system_group = Adw.PreferencesGroup(title=_("System"))
         box.append(system_group)
-        
+
         if self.system_info.get("vendor") or self.system_info.get("model"):
             device_row = Adw.ActionRow(title=_("Device"))
             device_text = f"{self.system_info.get('vendor', '')} {self.system_info.get('model', '')}".strip()
             device_row.set_subtitle(device_text or "Unknown")
             system_group.add(device_row)
-        
+
         os_row = Adw.ActionRow(title=_("Operating System"))
         os_row.set_subtitle(self.system_info.get("os", "Unknown"))
         system_group.add(os_row)
-        
+
         kernel_row = Adw.ActionRow(title=_("Kernel"))
         kernel_row.set_subtitle(self.kernel_info.get("version", "Unknown"))
         system_group.add(kernel_row)
-        
+
         hostname_row = Adw.ActionRow(title=_("Hostname"))
         hostname_row.set_subtitle(self.system_info.get("hostname", "Unknown"))
         system_group.add(hostname_row)
@@ -642,43 +565,13 @@ class MainWindow(Adw.ApplicationWindow):
         secure_row.set_subtitle(secure_status)
         features_group.add(secure_row)
 
-        lang_group = Adw.PreferencesGroup(title=_("Appearance"))
-        box.append(lang_group)
-
-        lang_row = Adw.ComboRow(title=_("Language"))
-        string_list = Gtk.StringList()
-        string_list.append("English")
-        string_list.append("فارسی")
-        lang_row.set_model(string_list)
-        lang_row.set_selected(0 if current_language == 'en' else 1)
-        lang_row.connect("notify::selected", self.on_language_changed)
-        lang_group.add(lang_row)
-
-        theme_row = Adw.ComboRow(title=_("Theme"))
-        theme_list = Gtk.StringList()
-        theme_list.append(_("Light"))
-        theme_list.append(_("Dark"))
-        theme_list.append(_("Auto"))
-        theme_row.set_model(theme_list)
-        
-        current_theme = self.style_manager.get_color_scheme()
-        if current_theme == Adw.ColorScheme.FORCE_LIGHT:
-            theme_row.set_selected(0)
-        elif current_theme == Adw.ColorScheme.FORCE_DARK:
-            theme_row.set_selected(1)
-        else:
-            theme_row.set_selected(2)
-        
-        theme_row.connect("notify::selected", self.on_theme_changed)
-        lang_group.add(theme_row)
-
         self.stack.add_named(scrolled, _("System Info"))
 
     def _build_logs_page(self):
         scrolled_outer = Gtk.ScrolledWindow()
         scrolled_outer.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled_outer.set_vexpand(True)
-        
+
         clamp = Adw.Clamp()
         clamp.set_maximum_size(900)
         clamp.set_margin_top(24)
@@ -686,13 +579,13 @@ class MainWindow(Adw.ApplicationWindow):
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled_outer.set_child(clamp)
-        
+
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         clamp.set_child(box)
-        
+
         header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         box.append(header_box)
-        
+
         log_label = Gtk.Label(label=_("Operation log"))
         log_label.set_xalign(0)
         log_label.add_css_class("title-3")
@@ -730,40 +623,40 @@ class MainWindow(Adw.ApplicationWindow):
             title = row.get_title()
             self.content_title.set_label(title)
             self.stack.set_visible_child_name(title)
-            
-            if title == _("GPU"): 
+
+            if title == _("GPU"):
                 self.profiles = self.gpu_profiles
-            elif title == _("Network"): 
+            elif title == _("Network"):
                 self.profiles = self.net_profiles
-            elif title == _("Audio"): 
+            elif title == _("Audio"):
                 self.profiles = self.audio_profiles
-            elif title == _("Bluetooth"): 
+            elif title == _("Bluetooth"):
                 self.profiles = self.bt_profiles
-            else: 
+            else:
                 self.profiles = []
 
     def on_profile_row_activated(self, row: Adw.ActionRow, idx: int, category: str):
         profiles_attr = f"{category.lower()}_profiles"
         profiles = getattr(self, profiles_attr, [])
-        
+
         if idx < len(profiles):
             self.current_profile = profiles[idx]
             self.current_category = category
-            self._show_toast(f"✓ {self.current_profile.name}")
+            self._show_toast(f"\u2713 {self.current_profile.name}")
 
     def _run_in_thread(self, target: Callable, *args, **kwargs):
         def wrapper():
             try:
                 target(*args, **kwargs)
             except CommandError as e:
-                msg = f"✗ Command error: {' '.join(e.cmd)}\nExit code: {e.returncode}\n{e.stderr}"
-                debug_log(msg)
+                msg = f"\u2717 Command error: {' '.join(e.cmd)}\nExit code: {e.returncode}\n{e.stderr}"
+                logger.debug(msg)
                 GLib.idle_add(self._show_toast, _("Operation failed. See log for details."))
                 GLib.idle_add(self._end_operation)
                 self.log_buffer.append(msg)
             except Exception as e:
-                msg = f"✗ Unexpected exception: {e}"
-                debug_log(msg)
+                msg = f"\u2717 Unexpected exception: {e}"
+                logger.debug(msg)
                 GLib.idle_add(self._show_toast, _("Unexpected error. See log for details."))
                 GLib.idle_add(self._end_operation)
                 self.log_buffer.append(msg)
@@ -785,43 +678,6 @@ class MainWindow(Adw.ApplicationWindow):
     def _end_operation(self):
         self.progress_bar.set_visible(False)
 
-    def on_search_changed(self, entry: Gtk.SearchEntry, category: str):
-        pass
-
-    def on_language_changed(self, combo_row, param):
-        selected = combo_row.get_selected()
-        new_lang = 'en' if selected == 0 else 'fa'
-        
-        if new_lang != current_language:
-            config = load_config()
-            config['language'] = new_lang
-            save_config(config)
-            
-            dialog = Adw.MessageDialog(
-                transient_for=self,
-                heading=_("Language Changed"),
-                body=_("Please restart the application to apply changes"),
-            )
-            dialog.add_response("ok", _("OK"))
-            dialog.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
-            dialog.present()
-
-    def on_theme_changed(self, combo_row, param):
-        selected = combo_row.get_selected()
-        if selected == 0:
-            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
-            theme_val = "light"
-        elif selected == 1:
-            self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
-            theme_val = "dark"
-        else:
-            self.style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT)
-            theme_val = "auto"
-
-        config = load_config()
-        config['theme'] = theme_val
-        save_config(config)
-
     def on_clear_logs(self, button):
         buffer = self.log_view.get_buffer()
         buffer.set_text("")
@@ -833,16 +689,16 @@ class MainWindow(Adw.ApplicationWindow):
             min-height: 40px;
             padding: 4px 8px;
         }
-        
+
         .navigation-sidebar row label.title {
             font-size: 0.9em;
         }
-        
+
         .navigation-sidebar row image {
             margin-right: 4px;
             opacity: 0.8;
         }
-        
+
         .success-icon {
             color: @success_color;
         }
@@ -862,9 +718,10 @@ class MainWindow(Adw.ApplicationWindow):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-    def on_refresh_hardware(self, button):
+    def on_refresh_hardware(self, _button=None):
         def refresh():
             GLib.idle_add(self._start_operation)
+            SystemProber.clear_lspci_cache()
             self.hardware_devices = SystemProber.get_hardware_devices()
             self.gpu_info = SystemProber.get_gpu_info()
             GLib.idle_add(self._end_operation)
@@ -873,52 +730,48 @@ class MainWindow(Adw.ApplicationWindow):
         self._run_in_thread(refresh)
 
     def _check_packages_installed(self, packages: List[str]) -> bool:
-        import subprocess
-        try:
-            result = subprocess.run(
-                ["pacman", "-Q"] + packages,
-                capture_output=True, text=True
-            )
-            return result.returncode == 0
-        except Exception:
-            return False
-        def refresh():
-            GLib.idle_add(self._start_operation)
-            self.hardware_devices = SystemProber.get_hardware_devices()
-            self.gpu_info = SystemProber.get_gpu_info()
-            GLib.idle_add(self._end_operation)
-            GLib.idle_add(self._show_toast, "Hardware detection refreshed.")
+        code, _, _ = SystemProber.run_command(["pacman", "-Q"] + packages)
+        return code == 0
 
-        self._run_in_thread(refresh)
+    def _on_alert_response(self, dialog, result, action):
+        response = dialog.choose_finish(result)
+        if response != "confirm":
+            return
+        action()
+
+    def _show_confirm_dialog(self, heading: str, body: str, on_confirm: Callable, destructive: bool = False):
+        dialog = Adw.AlertDialog.new(heading, body)
+        dialog.add_response("cancel", _("Cancel"))
+        dialog.add_response("confirm", _("Confirm"))
+        if destructive:
+            dialog.set_response_appearance("confirm", Adw.ResponseAppearance.DESTRUCTIVE)
+        else:
+            dialog.set_response_appearance("confirm", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.choose(self, None, self._on_alert_response, on_confirm)
 
     def on_install_clicked(self, button: Gtk.Button, category: str = None):
         if not self.current_profile:
             self._show_toast(_("No profile selected."))
             return
 
-        dialog = Adw.MessageDialog(
-            transient_for=self,
-            heading=_("Are you sure?"),
-            body=_("This action will install the driver packages."),
+        self._show_confirm_dialog(
+            _("Are you sure?"),
+            _("This action will install the driver packages."),
+            self._do_install,
         )
-        dialog.add_response("cancel", _("Cancel"))
-        dialog.add_response("install", _("Confirm"))
-        dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
-        dialog.connect("response", self._on_install_confirmed)
-        dialog.present()
 
-    def _on_install_confirmed(self, dialog, response):
-        if response != "install":
-            return
+    def _do_install(self):
 
         def progress(msg: str):
             self.log_buffer.append(msg)
 
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"➤ {_('Starting installation')}: {self.current_profile.name}")
+            self.log_buffer.append(f"\u27a4 {_('Starting installation')}: {self.current_profile.name}")
             self.manager.install_profile(self.current_profile, progress_cb=progress)
-            self.log_buffer.append(f"✓ {_('Profile installation finished.')}")
+            self.log_buffer.append(f"\u2713 {_('Profile installation finished.')}")
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Profile installed successfully."))
 
@@ -929,29 +782,23 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_toast(_("No profile selected."))
             return
 
-        dialog = Adw.MessageDialog(
-            transient_for=self,
-            heading=_("Are you sure?"),
-            body=_("This action will remove the driver packages."),
+        self._show_confirm_dialog(
+            _("Are you sure?"),
+            _("This action will remove the driver packages."),
+            self._do_remove,
+            destructive=True,
         )
-        dialog.add_response("cancel", _("Cancel"))
-        dialog.add_response("remove", _("Confirm"))
-        dialog.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.connect("response", self._on_remove_confirmed)
-        dialog.present()
 
-    def _on_remove_confirmed(self, dialog, response):
-        if response != "remove":
-            return
+    def _do_remove(self):
 
         def progress(msg: str):
             self.log_buffer.append(msg)
 
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"➤ {_('Starting removal')}: {self.current_profile.name}")
+            self.log_buffer.append(f"\u27a4 {_('Starting removal')}: {self.current_profile.name}")
             self.manager.remove_profile(self.current_profile, progress_cb=progress)
-            self.log_buffer.append(f"✓ {_('Profile removal finished.')}")
+            self.log_buffer.append(f"\u2713 {_('Profile removal finished.')}")
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Profile removed successfully."))
 
@@ -965,27 +812,21 @@ class MainWindow(Adw.ApplicationWindow):
             self._show_toast(_("This profile has no associated kernel module to disable."))
             return
 
-        dialog = Adw.MessageDialog(
-            transient_for=self,
-            heading=_("Are you sure?"),
-            body=_("This action will disable the hardware module."),
+        self._show_confirm_dialog(
+            _("Are you sure?"),
+            _("This action will disable the hardware module."),
+            self._do_disable,
+            destructive=True,
         )
-        dialog.add_response("cancel", _("Cancel"))
-        dialog.add_response("disable", _("Confirm"))
-        dialog.set_response_appearance("disable", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.connect("response", self._on_disable_confirmed)
-        dialog.present()
 
-    def _on_disable_confirmed(self, dialog, response):
-        if response != "disable":
-            return
+    def _do_disable(self):
 
         def progress(msg: str):
             self.log_buffer.append(msg)
 
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"➤ {_('Disabling hardware module')}: {self.current_profile.name}")
+            self.log_buffer.append(f"\u27a4 {_('Disabling hardware module')}: {self.current_profile.name}")
             self.manager.disable_driver(self.current_profile, progress_cb=progress)
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Hardware disabled. Reboot might be required."))
@@ -1005,7 +846,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"➤ {_('Enabling hardware module')}: {self.current_profile.name}")
+            self.log_buffer.append(f"\u27a4 {_('Enabling hardware module')}: {self.current_profile.name}")
             self.manager.enable_driver(self.current_profile, progress_cb=progress)
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Hardware enabled."))
@@ -1016,17 +857,3 @@ class MainWindow(Adw.ApplicationWindow):
         toast = Adw.Toast.new(text)
         toast.set_timeout(3)
         self.toast_overlay.add_toast(toast)
-
-class ParchDriverManagerApp(Adw.Application):
-    def __init__(self):
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
-
-    def do_activate(self):
-        win = self.props.active_window
-        if not win:
-            win = MainWindow(self)
-        win.present()
-
-def main(argv: List[str]) -> int:
-    app = ParchDriverManagerApp()
-    return app.run(argv)

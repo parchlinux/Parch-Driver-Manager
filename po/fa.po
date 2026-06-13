@@ -1,0 +1,243 @@
+# Parch Driver Manager - Persian translation
+# Copyright (C) 2026 Parch Linux
+# This file is distributed under the same license as the Parch Driver Manager.
+# Parch Linux Team, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Parch Driver Manager 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/parchlinux/Parch-Driver-Manager/issues\n"
+"POT-Creation-Date: 2026-06-09 00:00+0000\n"
+"PO-Revision-Date: 2026-06-09 00:00+0000\n"
+"Last-Translator: Parch Linux Team\n"
+"Language-Team: Persian\n"
+"Language: fa\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Parch Driver Manager"
+msgstr "مدیریت درایورهای پارچ"
+
+msgid "Hardware & Drivers"
+msgstr "سخت‌افزار و درایورها"
+
+msgid "GPU"
+msgstr "کارت گرافیک"
+
+msgid "Network"
+msgstr "شبکه"
+
+msgid "Audio"
+msgstr "صدا"
+
+msgid "Bluetooth"
+msgstr "بلوتوث"
+
+msgid "System Info"
+msgstr "اطلاعات سیستم"
+
+msgid "Logs"
+msgstr "گزارشات"
+
+msgid "Select a Category"
+msgstr "یک دسته انتخاب کنید"
+
+msgid "Detected Hardware"
+msgstr "سخت‌افزار شناسایی‌شده"
+
+msgid "Available Drivers"
+msgstr "درایورهای موجود"
+
+msgid "Driver"
+msgstr "درایور"
+
+msgid "None"
+msgstr "ندارد"
+
+msgid "Install"
+msgstr "نصب"
+
+msgid "Remove"
+msgstr "حذف"
+
+msgid "Enable"
+msgstr "فعال"
+
+msgid "Disable"
+msgstr "غیرفعال"
+
+msgid "General"
+msgstr "عمومی"
+
+msgid "Quit"
+msgstr "خروج"
+
+msgid "Refresh hardware"
+msgstr "تازه‌سازی سخت‌افزار"
+
+msgid "Keyboard shortcuts"
+msgstr "میانبرهای صفحه‌کلید"
+
+msgid "Keyboard Shortcuts"
+msgstr "میانبرهای صفحه‌کلید"
+
+msgid "Refresh hardware detection"
+msgstr "تازه‌سازی شناسایی سخت‌افزار"
+
+msgid "No GPU detected"
+msgstr "کارت گرافیک یافت نشد"
+
+msgid "No Network devices detected"
+msgstr "دستگاه شبکه‌ای یافت نشد"
+
+msgid "No Audio devices detected"
+msgstr "دستگاه صوتی یافت نشد"
+
+msgid "No Bluetooth devices detected"
+msgstr "دستگاه بلوتوث یافت نشد"
+
+msgid "Hardware"
+msgstr "سخت‌افزار"
+
+msgid "Processor"
+msgstr "پردازنده"
+
+msgid "Memory"
+msgstr "حافظه"
+
+msgid "Device"
+msgstr "دستگاه"
+
+msgid "Operating System"
+msgstr "سیستم‌عامل"
+
+msgid "Kernel"
+msgstr "کرنل"
+
+msgid "Hostname"
+msgstr "نام میزبان"
+
+msgid "Display Server"
+msgstr "سرور نمایش"
+
+msgid "System"
+msgstr "سیستم"
+
+msgid "Features"
+msgstr "ویژگی‌ها"
+
+msgid "Hybrid Graphics"
+msgstr "گرافیک ترکیبی"
+
+msgid "Secure Boot"
+msgstr "بوت امن"
+
+msgid "Enabled"
+msgstr "فعال"
+
+msgid "Disabled"
+msgstr "غیرفعال"
+
+msgid "Operation log"
+msgstr "گزارش عملیات"
+
+msgid "Clear"
+msgstr "پاک کردن"
+
+msgid "Cancel"
+msgstr "لغو"
+
+msgid "Confirm"
+msgstr "تایید"
+
+msgid "Are you sure?"
+msgstr "آیا مطمئن هستید؟"
+
+msgid "This action will install the driver packages."
+msgstr "این عمل پکیج‌های درایور را نصب می‌کند."
+
+msgid "This action will remove the driver packages."
+msgstr "این عمل پکیج‌های درایور را حذف می‌کند."
+
+msgid "This action will disable the hardware module."
+msgstr "این عمل ماژول سخت‌افزاری را غیرفعال می‌کند."
+
+msgid "No profile selected."
+msgstr "پروفایلی انتخاب نشده است."
+
+msgid "Profile installed successfully."
+msgstr "پروفایل با موفقیت نصب شد."
+
+msgid "Profile removed successfully."
+msgstr "پروفایل با موفقیت حذف شد."
+
+msgid "Hardware disabled. Reboot might be required."
+msgstr "سخت‌افزار غیرفعال شد. ممکن است ریبوت نیاز باشد."
+
+msgid "Hardware enabled."
+msgstr "سخت‌افزار فعال شد."
+
+msgid "This profile has no associated kernel module to disable."
+msgstr "این پروفایل ماژول کرنل ندارد."
+
+msgid "This profile has no associated kernel module to enable."
+msgstr "این پروفایل ماژول کرنل ندارد."
+
+msgid "OK"
+msgstr "باشه"
+
+msgid "Starting installation"
+msgstr "شروع نصب"
+
+msgid "Profile installation finished."
+msgstr "نصب پروفایل به پایان رسید."
+
+msgid "Starting removal"
+msgstr "شروع حذف"
+
+msgid "Profile removal finished."
+msgstr "حذف پروفایل به پایان رسید."
+
+msgid "Disabling hardware module"
+msgstr "غیرفعال کردن ماژول سخت‌افزاری"
+
+msgid "Enabling hardware module"
+msgstr "فعال کردن ماژول سخت‌افزاری"
+
+msgid "Operation failed. See log for details."
+msgstr "عملیات ناموفق بود. گزارشات را ببینید."
+
+msgid "Unexpected error. See log for details."
+msgstr "خطای غیرمنتظره. گزارشات را ببینید."
+
+msgid "About"
+msgstr "درباره"
+
+msgid "Categories"
+msgstr "دسته‌ها"
+
+msgid "Content"
+msgstr "محتوا"
+
+msgid "Unknown"
+msgstr "نامشخص"
+
+msgid "No Bluetooth service running"
+msgstr "سرویس بلوتوث فعال نیست"
+
+msgid "Bluetooth is soft-blocked"
+msgstr "بلوتوث به‌صورت نرم‌افزاری مسدود شده"
+
+msgid "Bluetooth is hard-blocked"
+msgstr "بلوتوث به‌صورت سخت‌افزاری مسدود شده"
+
+msgid "Service:"
+msgstr "سرویس:"
+
+msgid "Status:"
+msgstr "وضعیت:"
+
+msgid "No device found"
+msgstr "دستگاهی یافت نشد"

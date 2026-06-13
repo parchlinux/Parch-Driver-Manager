@@ -1,7 +1,9 @@
 from typing import List, Callable, Optional
-from system_prober import SystemProber
-from backend import BackendRunner
-from profiles import DriverProfile
+
+from .system_prober import SystemProber
+from .backend import BackendRunner
+from .profiles import DriverProfile
+
 
 class DriverManager:
     def __init__(self, backend: BackendRunner):
@@ -27,7 +29,7 @@ class DriverManager:
         self.backend.run(["pacman", "-S", "--needed", "--noconfirm"] + pkgs_to_install, check=True)
 
         if profile.post_install:
-            if progress_cb: progress_cb("Running post-install steps…")
+            if progress_cb: progress_cb("Running post-install steps\u2026")
             profile.post_install(self.backend)
 
     def remove_profile(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):
@@ -40,7 +42,7 @@ class DriverManager:
         self.backend.run(["pacman", "-Rns", "--noconfirm"] + pkgs_to_remove, check=True)
 
         if profile.post_remove:
-            if progress_cb: progress_cb("Running post-remove steps…")
+            if progress_cb: progress_cb("Running post-remove steps\u2026")
             profile.post_remove(self.backend)
 
     def disable_driver(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):

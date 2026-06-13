@@ -1,0 +1,244 @@
+# Parch Driver Manager
+# Copyright (C) 2026 Parch Linux
+# This file is distributed under the same license as the Parch Driver Manager.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Parch Driver Manager 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/parchlinux/Parch-Driver-Manager/issues\n"
+"POT-Creation-Date: 2026-06-09 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Parch Driver Manager"
+msgstr ""
+
+msgid "Hardware & Drivers"
+msgstr ""
+
+msgid "GPU"
+msgstr ""
+
+msgid "Network"
+msgstr ""
+
+msgid "Audio"
+msgstr ""
+
+msgid "Bluetooth"
+msgstr ""
+
+msgid "System Info"
+msgstr ""
+
+msgid "Logs"
+msgstr ""
+
+msgid "Select a Category"
+msgstr ""
+
+msgid "Detected Hardware"
+msgstr ""
+
+msgid "Available Drivers"
+msgstr ""
+
+msgid "Driver"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Install"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Enable"
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "General"
+msgstr ""
+
+msgid "Quit"
+msgstr ""
+
+msgid "Refresh hardware"
+msgstr ""
+
+msgid "Keyboard shortcuts"
+msgstr ""
+
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+msgid "Refresh hardware detection"
+msgstr ""
+
+msgid "No GPU detected"
+msgstr ""
+
+msgid "No Network devices detected"
+msgstr ""
+
+msgid "No Audio devices detected"
+msgstr ""
+
+msgid "No Bluetooth devices detected"
+msgstr ""
+
+msgid "Hardware"
+msgstr ""
+
+msgid "Processor"
+msgstr ""
+
+msgid "Memory"
+msgstr ""
+
+msgid "Device"
+msgstr ""
+
+msgid "Operating System"
+msgstr ""
+
+msgid "Kernel"
+msgstr ""
+
+msgid "Hostname"
+msgstr ""
+
+msgid "Display Server"
+msgstr ""
+
+msgid "System"
+msgstr ""
+
+msgid "Features"
+msgstr ""
+
+msgid "Hybrid Graphics"
+msgstr ""
+
+msgid "Secure Boot"
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Disabled"
+msgstr ""
+
+msgid "Operation log"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Confirm"
+msgstr ""
+
+msgid "Are you sure?"
+msgstr ""
+
+msgid "This action will install the driver packages."
+msgstr ""
+
+msgid "This action will remove the driver packages."
+msgstr ""
+
+msgid "This action will disable the hardware module."
+msgstr ""
+
+msgid "No profile selected."
+msgstr ""
+
+msgid "Profile installed successfully."
+msgstr ""
+
+msgid "Profile removed successfully."
+msgstr ""
+
+msgid "Hardware disabled. Reboot might be required."
+msgstr ""
+
+msgid "Hardware enabled."
+msgstr ""
+
+msgid "This profile has no associated kernel module to disable."
+msgstr ""
+
+msgid "This profile has no associated kernel module to enable."
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Starting installation"
+msgstr ""
+
+msgid "Profile installation finished."
+msgstr ""
+
+msgid "Starting removal"
+msgstr ""
+
+msgid "Profile removal finished."
+msgstr ""
+
+msgid "Disabling hardware module"
+msgstr ""
+
+msgid "Enabling hardware module"
+msgstr ""
+
+msgid "Operation failed. See log for details."
+msgstr ""
+
+msgid "Unexpected error. See log for details."
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "Categories"
+msgstr ""
+
+msgid "Content"
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "Hardware & Drivers"
+msgstr ""
+
+msgid "No Bluetooth service running"
+msgstr ""
+
+msgid "Bluetooth is soft-blocked"
+msgstr ""
+
+msgid "Bluetooth is hard-blocked"
+msgstr ""
+
+msgid "Service:"
+msgstr ""
+
+msgid "Status:"
+msgstr ""
+
+msgid "No device found"
+msgstr ""

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" ry="28" fill="url(#bg)"/>
+  <rect x="30" y="30" width="68" height="68" rx="8" ry="8" fill="url(#chip)"/>
+  <rect x="38" y="38" width="52" height="52" rx="4" ry="4" fill="#334155"/>
+  <path d="M50 52 L50 76 L78 76 L78 52 Z" fill="#475569"/>
+  <rect x="56" y="58" width="16" height="10" rx="2" fill="#2dd4bf"/>
+  <rect x="60" y="48" width="8" height="4" rx="1" fill="#5eead4"/>
+  <rect x="60" y="76" width="8" height="4" rx="1" fill="#5eead4"/>
+  <rect x="48" y="62" width="4" height="4" rx="1" fill="#5eead4"/>
+  <rect x="76" y="62" width="4" height="4" rx="1" fill="#5eead4"/>
+  <line x1="34" y1="40" x2="22" y2="28" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="94" y1="40" x2="106" y2="28" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="34" y1="88" x2="22" y2="100" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="94" y1="88" x2="106" y2="100" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="64" y1="26" x2="64" y2="16" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="64" y1="102" x2="64" y2="112" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="26" y1="64" x2="16" y2="64" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+  <line x1="112" y1="64" x2="102" y2="64" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+</svg>

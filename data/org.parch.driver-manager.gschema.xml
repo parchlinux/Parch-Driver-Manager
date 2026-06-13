@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema path="/org/parch/driver-manager/" id="org.parch.driver-manager">
+    <key name="language" type="s">
+      <default>'en'</default>
+      <summary>Application language</summary>
+      <description>The language code for the application UI (en, fa).</description>
+    </key>
+    <key name="theme" type="s">
+      <default>'auto'</default>
+      <summary>Color scheme</summary>
+      <description>The color scheme preference (light, dark, auto).</description>
+    </key>
+    <key name="window-width" type="i">
+      <default>1200</default>
+      <summary>Window width</summary>
+      <description>Last saved window width.</description>
+    </key>
+    <key name="window-height" type="i">
+      <default>750</default>
+      <summary>Window height</summary>
+      <description>Last saved window height.</description>
+    </key>
+    <key name="window-maximized" type="b">
+      <default>false</default>
+      <summary>Window maximized</summary>
+      <description>Whether the window was maximized on last close.</description>
+    </key>
+  </schema>
+</schemalist>
