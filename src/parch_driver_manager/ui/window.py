@@ -1,7 +1,7 @@
 import logging
 import os
 import threading
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Dict, Tuple, Any
 
 import gi
 gi.require_version("Gtk", "4.0")
@@ -31,17 +31,31 @@ class MainWindow(Adw.ApplicationWindow):
         if self.settings:
             saved_w = self.settings.get_int("window-width")
             saved_h = self.settings.get_int("window-height")
-            self.set_default_size(saved_w, saved_h)
+            self.set_default_size(max(saved_w, 360), max(saved_h, 500))
             if self.settings.get_boolean("window-maximized"):
                 self.maximize()
         else:
-            self.set_default_size(1200, 750)
+            self.set_default_size(950, 680)
 
         backend_env = os.environ.get("PARCH_DM_BACKEND", "pkexec")
         use_pkexec = backend_env not in ("none", "sudo", "doas")
         self.backend = BackendRunner(use_pkexec=use_pkexec)
         self.manager = DriverManager(self.backend)
 
+        self._probe_hardware()
+
+        self.profile_rows: Dict[str, List[Tuple[Adw.ActionRow, DriverProfile, Gtk.Box]]] = {}
+        self.current_category: str = "GPU"
+        self.current_operation: Optional[threading.Thread] = None
+        self._progress_timeout_id: Optional[int] = None
+
+        if is_rtl():
+            self.set_direction(Gtk.TextDirection.RTL)
+
+        self._build_ui()
+        self._connect_window_state()
+
+    def _probe_hardware(self):
         self.hardware_devices = SystemProber.get_hardware_devices()
         self.gpu_info = SystemProber.get_gpu_info()
         self.hybrid = SystemProber.is_hybrid_graphics()
@@ -49,18 +63,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.kernel_info = SystemProber.get_kernel_info()
         self.system_info = SystemProber.get_system_info()
         self.session_type = SystemProber.get_session_type()
-
-        self.current_profile: Optional[DriverProfile] = None
-        self.profiles: List[DriverProfile] = []
         self.kernel_flavor = self.kernel_info.get('flavor', 'default')
-        self.current_operation: Optional[threading.Thread] = None
-        self.search_text: str = ""
-
-        if is_rtl():
-            self.set_direction(Gtk.TextDirection.RTL)
-
-        self._build_ui()
-        self._connect_window_state()
 
     def _connect_window_state(self):
         if not self.settings:
@@ -78,27 +81,80 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast_overlay = Adw.ToastOverlay()
         self.set_content(self.toast_overlay)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        main_box.set_vexpand(True)
-        self.toast_overlay.set_child(main_box)
+        # Overlay Split View (standard GNOME collapsible sidebar)
+        self.split_view = Adw.OverlaySplitView()
+        self.split_view.set_min_sidebar_width(240)
+        self.split_view.set_max_sidebar_width(300)
+        self.split_view.set_sidebar_position(Gtk.PackType.START)
+        self.split_view.set_show_sidebar(True)
+        self.toast_overlay.set_child(self.split_view)
 
-        header = Adw.HeaderBar()
-        header.add_css_class("flat")
-        main_box.append(header)
+        # Responsive Mobile Breakpoint
+        bp_mobile = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 720px"))
+        bp_mobile.add_setter(self.split_view, "collapsed", True)
+        self.add_breakpoint(bp_mobile)
 
-        menu_button = Gtk.MenuButton()
-        menu_button.set_icon_name("open-menu-symbolic")
-        menu_button.set_tooltip_text(_("Menu"))
-        header.pack_end(menu_button)
+        # Sidebar Panel
+        sidebar_toolbar = Adw.ToolbarView()
+        self.split_view.set_sidebar(sidebar_toolbar)
+
+        sidebar_header = Adw.HeaderBar()
+        sidebar_header.add_css_class("flat")
+        sidebar_title = Adw.WindowTitle(title=_("Parch Drivers"), subtitle=_("Categories"))
+        sidebar_header.set_title_widget(sidebar_title)
+        sidebar_toolbar.add_top_bar(sidebar_header)
+
         refresh_button = Gtk.Button()
         refresh_button.set_icon_name("view-refresh-symbolic")
         refresh_button.set_tooltip_text(_("Refresh hardware detection"))
         refresh_button.add_css_class("flat")
         refresh_button.connect("clicked", self.on_refresh_hardware)
-        header.pack_start(refresh_button)
+        sidebar_header.pack_start(refresh_button)
+
+        sidebar_scroll = Gtk.ScrolledWindow()
+        sidebar_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sidebar_toolbar.set_content(sidebar_scroll)
+
+        sidebar_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        sidebar_box.set_margin_top(8)
+        sidebar_box.set_margin_bottom(8)
+        sidebar_box.set_margin_start(8)
+        sidebar_box.set_margin_end(8)
+        sidebar_scroll.set_child(sidebar_box)
+
+        self.sidebar_list = Gtk.ListBox()
+        self.sidebar_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.sidebar_list.add_css_class("navigation-sidebar")
+        self.sidebar_list.add_css_class("boxed-list")
+        self.sidebar_list.set_vexpand(True)
+        self.sidebar_list.connect("row-selected", self.on_sidebar_selected)
+        sidebar_box.append(self.sidebar_list)
+
+        self._populate_sidebar()
+
+        # Content Panel
+        content_toolbar = Adw.ToolbarView()
+        self.split_view.set_content(content_toolbar)
+
+        self.content_header = Adw.HeaderBar()
+        self.content_header.add_css_class("flat")
+        self.content_window_title = Adw.WindowTitle(title=_("Select a Category"), subtitle=_("Parch Driver Manager"))
+        self.content_header.set_title_widget(self.content_window_title)
+        content_toolbar.add_top_bar(self.content_header)
+
+        toggle_sidebar_btn = Gtk.Button()
+        toggle_sidebar_btn.set_icon_name("sidebar-show-symbolic")
+        toggle_sidebar_btn.set_tooltip_text(_("Toggle Sidebar"))
+        toggle_sidebar_btn.add_css_class("flat")
+        toggle_sidebar_btn.connect("clicked", self.on_toggle_sidebar)
+        self.content_header.pack_start(toggle_sidebar_btn)
+
+        menu_button = Gtk.MenuButton()
+        menu_button.set_icon_name("open-menu-symbolic")
+        menu_button.set_tooltip_text(_("Menu"))
+        self.content_header.pack_end(menu_button)
 
         menu = Gio.Menu()
-
         app_section = Gio.Menu()
         app_section.append(_("Keyboard Shortcuts"), "app.shortcuts")
         menu.append_section(None, app_section)
@@ -113,88 +169,22 @@ class MainWindow(Adw.ApplicationWindow):
 
         menu_button.set_menu_model(menu)
 
-        self.split_view = Adw.NavigationSplitView()
-        self.split_view.set_show_content(True)
-        self.split_view.set_vexpand(True)
-        self.split_view.set_min_sidebar_width(200)
-        self.split_view.set_max_sidebar_width(280)
-        main_box.append(self.split_view)
-
-        bp = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 700px"))
-        bp.add_setter(self.split_view, "collapsed", True)
-        self.add_breakpoint(bp)
-
-        sidebar_page = Adw.NavigationPage(title=_("Categories"))
-        self.split_view.set_sidebar(sidebar_page)
-
-        sidebar_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        sidebar_box.set_vexpand(True)
-        sidebar_page.set_child(sidebar_box)
-
-        sidebar_header = Adw.HeaderBar(show_start_title_buttons=False, show_end_title_buttons=False)
-        sidebar_header.add_css_class("flat")
-        title_label = Gtk.Label(label=_("Hardware & Drivers"))
-        title_label.add_css_class("title-2")
-        sidebar_header.set_title_widget(title_label)
-        sidebar_box.append(sidebar_header)
-
-        self.sidebar_list = Gtk.ListBox()
-        self.sidebar_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.sidebar_list.add_css_class("navigation-sidebar")
-        self.sidebar_list.set_vexpand(True)
-        self.sidebar_list.connect("row-selected", self.on_sidebar_selected)
-        sidebar_box.append(self.sidebar_list)
-
-        categories = [
-            (_("GPU"), "video-display-symbolic"),
-            (_("Network"), "network-wireless-symbolic"),
-            (_("Audio"), "audio-card-symbolic"),
-            (_("Bluetooth"), "bluetooth-symbolic"),
-            (_("System Info"), "preferences-system-symbolic"),
-            (_("Logs"), "text-x-generic-symbolic")
-        ]
-
-        for cat, icon in categories:
-            row = Adw.ActionRow(title=cat)
-            row.set_icon_name(icon)
-            self.sidebar_list.append(row)
-
-        content_page = Adw.NavigationPage(title=_("Content"))
-        self.split_view.set_content(content_page)
-
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        content_box.set_vexpand(True)
-        content_page.set_child(content_box)
-
-        self.content_header = Adw.HeaderBar(show_start_title_buttons=False, show_end_title_buttons=False)
-        self.content_header.add_css_class("flat")
-        self.content_title = Gtk.Label(label=_("Select a Category"))
-        self.content_title.add_css_class("title-1")
-        self.content_header.set_title_widget(self.content_title)
-        content_box.append(self.content_header)
-
         self.progress_bar = Gtk.ProgressBar()
         self.progress_bar.set_visible(False)
-        self.progress_bar.add_css_class("osd")
-        content_box.append(self.progress_bar)
+        content_toolbar.add_top_bar(self.progress_bar)
 
         stack_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         stack_box.set_vexpand(True)
-        content_box.append(stack_box)
+        content_toolbar.set_content(stack_box)
 
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.stack.set_transition_duration(300)
+        self.stack.set_transition_duration(250)
         self.stack.set_vexpand(True)
         self.stack.set_hexpand(True)
         stack_box.append(self.stack)
 
-        self._build_gpu_page()
-        self._build_network_page()
-        self._build_audio_page()
-        self._build_bluetooth_page()
-        self._build_info_page()
-        self._build_logs_page()
+        self._rebuild_all_pages()
 
         GLib.idle_add(self.sidebar_list.select_row, self.sidebar_list.get_row_at_index(0))
 
@@ -204,83 +194,209 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._load_css()
 
+    def on_toggle_sidebar(self, _button=None):
+        self.split_view.set_show_sidebar(not self.split_view.get_show_sidebar())
+
+    def _populate_sidebar(self):
+        while True:
+            row = self.sidebar_list.get_row_at_index(0)
+            if not row:
+                break
+            self.sidebar_list.remove(row)
+
+        gpu_sub = self.gpu_info.get("vendor", "Graphics")
+        if self.gpu_info.get("model"):
+            gpu_sub = f"{gpu_sub} ({self.gpu_info.get('model')})"
+
+        bt_active = SystemProber.is_bluetooth_service_running() or SystemProber.is_bluetooth_kernel_module_loaded() or self.manager.is_package_installed("parch-bluetooth") or self.manager.is_package_installed("bluez")
+        bt_sub = _("Active") if bt_active else _("Disabled")
+
+        categories = [
+            (_("GPU"), "computer-symbolic", gpu_sub, _("Graphics Drivers")),
+            (_("Network"), "network-wireless-symbolic", f"{len([d for d in self.hardware_devices if d['category'] == 'Network'])} device(s)", _("Network Interfaces")),
+            (_("Audio"), "audio-card-symbolic", "PipeWire / ALSA", _("Audio Stack")),
+            (_("Bluetooth"), "preferences-system-bluetooth-symbolic", bt_sub, _("Bluetooth Services")),
+            (_("System Info"), "preferences-system-symbolic", self.system_info.get("os", "Parch GNU/Linux"), _("Hardware and OS Details")),
+            (_("Logs"), "text-x-generic-symbolic", _("Operation logs"), _("Activity and Event Logs"))
+        ]
+
+        for cat, icon, sub, subtitle_desc in categories:
+            row = Adw.ActionRow(title=cat, subtitle=sub)
+            row.set_icon_name(icon)
+            
+            # Active indicator badge
+            if cat in (_("GPU"), _("Network"), _("Audio"), _("Bluetooth")):
+                active_icon = Gtk.Image.new_from_icon_name("emblem-ok-symbolic")
+                active_icon.add_css_class("success-icon")
+                row.add_suffix(active_icon)
+                
+            self.sidebar_list.append(row)
+
+    def _rebuild_all_pages(self):
+        child = self.stack.get_first_child()
+        while child is not None:
+            next_child = child.get_next_sibling()
+            self.stack.remove(child)
+            child = next_child
+
+        self.profile_rows.clear()
+        self._build_gpu_page()
+        self._build_network_page()
+        self._build_audio_page()
+        self._build_bluetooth_page()
+        self._build_info_page()
+        self._build_logs_page()
+
+    def _is_profile_installed(self, profile: DriverProfile) -> bool:
+        if profile.packages:
+            all_installed = True
+            for pkg in profile.packages:
+                if not self.manager.is_package_installed(pkg):
+                    all_installed = False
+                    break
+            if all_installed:
+                return True
+
+        key_packages = []
+        if profile.category == "Bluetooth":
+            key_packages = ["parch-bluetooth", "bluez", "bluez-utils", "bluedevil", "blueman"]
+        elif profile.category == "Network" or "NetworkManager" in profile.name:
+            key_packages = ["networkmanager", "network-manager", "nm-connection-editor", "iwd", "broadcom-wl-dkms"]
+        elif "NVIDIA" in profile.name:
+            key_packages = ["nvidia-utils", "nvidia", "nvidia-open", "nvidia-open-dkms", "nvidia-prime"]
+        elif "AMD" in profile.name:
+            key_packages = ["xf86-video-amdgpu", "vulkan-radeon", "mesa"]
+        elif "Intel" in profile.name:
+            key_packages = ["xf86-video-intel", "vulkan-intel", "mesa"]
+
+        for pkg in key_packages:
+            if self.manager.is_package_installed(pkg):
+                return True
+
+        if profile.category == "Network" or "NetworkManager" in profile.name:
+            code, out, _ = SystemProber.run_command(["systemctl", "is-active", "NetworkManager"])
+            if code == 0:
+                return True
+
+        if profile.module:
+            for dev in self.hardware_devices:
+                if dev.get("driver") == profile.module:
+                    return True
+            if profile.module in ("btusb", "bluetooth"):
+                if SystemProber.is_bluetooth_kernel_module_loaded() or SystemProber.is_bluetooth_service_running() or SystemProber.has_bluetooth_adapter():
+                    return True
+
+        return False
+
+    def _is_module_disabled(self, module: str) -> bool:
+        blacklist_path = "/etc/modprobe.d/parch-dm-blacklist.conf"
+        if os.path.exists(blacklist_path):
+            try:
+                with open(blacklist_path, "r") as f:
+                    content = f.read()
+                    return f"blacklist {module}" in content
+            except Exception:
+                pass
+        return False
+
     def _create_profile_widgets(self, profiles: List[DriverProfile], category: str) -> Gtk.Box:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
 
-        profiles_group = Adw.PreferencesGroup(title=_("Available Drivers"))
+        if not profiles:
+            status_page = Adw.StatusPage()
+            status_page.set_title(_("No profiles available"))
+            status_page.set_description(_("No driver profiles were found for this category."))
+            status_page.set_icon_name("dialog-information-symbolic")
+            box.append(status_page)
+            return box
+
+        profiles_group = Adw.PreferencesGroup(title=_("Available Drivers"), description=_("Manage driver packages for this hardware category"))
         box.append(profiles_group)
 
         profile_listbox = Gtk.ListBox()
-        profile_listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        profile_listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         profile_listbox.add_css_class("boxed-list")
         profiles_group.add(profile_listbox)
         setattr(self, f"profile_listbox_{category.lower()}", profile_listbox)
 
+        category_row_data = []
         for idx, profile in enumerate(profiles):
             row = Adw.ActionRow(title=profile.name, subtitle=profile.description)
-            row.set_activatable(True)
+            row_actions_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            row_actions_box.set_valign(Gtk.Align.CENTER)
+            row.add_suffix(row_actions_box)
 
-            installed = self._check_packages_installed(profile.packages)
-            status_icon = Gtk.Image()
-            if installed:
-                status_icon.set_from_icon_name("emblem-ok-symbolic")
-                status_icon.add_css_class("success-icon")
-                row.set_subtitle(profile.description + " \u2014 Installed")
-            else:
-                status_icon.set_from_icon_name("dialog-question-symbolic")
-                status_icon.add_css_class("warning-icon")
-            row.add_suffix(status_icon)
-
-            row.connect("activated", self.on_profile_row_activated, idx, category)
             profile_listbox.append(row)
+            category_row_data.append((row, profile, row_actions_box))
 
-        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, margin_top=16)
-        button_box.set_halign(Gtk.Align.CENTER)
-        box.append(button_box)
-
-        install_button = Gtk.Button(label=_("Install"))
-        install_button.add_css_class("suggested-action")
-        install_button.add_css_class("pill")
-        install_button.connect("clicked", self.on_install_clicked, category)
-        button_box.append(install_button)
-
-        remove_button = Gtk.Button(label=_("Remove"))
-        remove_button.add_css_class("destructive-action")
-        remove_button.add_css_class("pill")
-        remove_button.connect("clicked", self.on_remove_clicked, category)
-        button_box.append(remove_button)
-
-        disable_button = Gtk.Button(label=_("Disable"))
-        disable_button.add_css_class("pill")
-        disable_button.connect("clicked", self.on_disable_clicked, category)
-        button_box.append(disable_button)
-
-        enable_button = Gtk.Button(label=_("Enable"))
-        enable_button.add_css_class("pill")
-        enable_button.connect("clicked", self.on_enable_clicked, category)
-        button_box.append(enable_button)
+        self.profile_rows[category] = category_row_data
+        self._refresh_profile_widgets(category)
 
         return box
+
+    def _refresh_profile_widgets(self, category: str):
+        row_data_list = self.profile_rows.get(category, [])
+        for row, profile, actions_box in row_data_list:
+            child = actions_box.get_first_child()
+            while child is not None:
+                next_child = child.get_next_sibling()
+                actions_box.remove(child)
+                child = next_child
+
+            installed = self._is_profile_installed(profile)
+
+            if installed:
+                row.set_subtitle(f"{profile.description} • {_('Installed')}")
+
+                status_badge = Gtk.Image.new_from_icon_name("emblem-ok-symbolic")
+                status_badge.add_css_class("success-icon")
+                actions_box.append(status_badge)
+
+                if profile.module:
+                    module_disabled = self._is_module_disabled(profile.module)
+                    if module_disabled:
+                        enable_btn = Gtk.Button(label=_("Enable"))
+                        enable_btn.add_css_class("pill")
+                        enable_btn.connect("clicked", lambda _, p=profile, c=category: self.on_enable_clicked_for_profile(p, c))
+                        actions_box.append(enable_btn)
+                    else:
+                        disable_btn = Gtk.Button(label=_("Disable"))
+                        disable_btn.add_css_class("pill")
+                        disable_btn.connect("clicked", lambda _, p=profile, c=category: self.on_disable_clicked_for_profile(p, c))
+                        actions_box.append(disable_btn)
+
+                remove_btn = Gtk.Button(label=_("Remove"))
+                remove_btn.add_css_class("destructive-action")
+                remove_btn.add_css_class("pill")
+                remove_btn.connect("clicked", lambda _, p=profile, c=category: self.on_remove_clicked_for_profile(p, c))
+                actions_box.append(remove_btn)
+            else:
+                row.set_subtitle(profile.description)
+
+                install_btn = Gtk.Button(label=_("Install"))
+                install_btn.add_css_class("suggested-action")
+                install_btn.add_css_class("pill")
+                install_btn.connect("clicked", lambda _, p=profile, c=category: self.on_install_clicked_for_profile(p, c))
+                actions_box.append(install_btn)
 
     def _build_gpu_page(self):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(900)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
-        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
+        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"), description=_("Graphics adapters detected by system prober"))
         main_box.append(hw_group)
 
         hw_list = Gtk.ListBox()
@@ -291,29 +407,27 @@ class MainWindow(Adw.ApplicationWindow):
         if gpus:
             for gpu in gpus:
                 driver_text = gpu['driver'] if gpu['driver'] else _('None')
-                sub = f"{_('Driver')}: {driver_text}"
+                sub = f"{_('Driver in use')}: {driver_text}"
                 row = Adw.ActionRow(title=gpu['name'], subtitle=sub)
 
                 status_badge = Gtk.Image()
-                status_badge.set_from_icon_name("media-record-symbolic")
-                status_badge.set_pixel_size(10)
                 if gpu['driver']:
+                    status_badge.set_from_icon_name("emblem-ok-symbolic")
                     status_badge.add_css_class("success-icon")
                 else:
+                    status_badge.set_from_icon_name("dialog-warning-symbolic")
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-
                 hw_list.append(row)
         else:
             hw_group.set_visible(False)
             status_page = Adw.StatusPage()
             status_page.set_title(_("No GPU detected"))
-            status_page.set_icon_name("video-display-symbolic")
-            status_page.set_vexpand(True)
-            status_page.set_hexpand(True)
+            status_page.set_icon_name("computer-symbolic")
             main_box.append(status_page)
 
-        self.gpu_profiles = DriverProfiles.get_gpu_profiles(self.gpu_info.get("vendor", "Unknown"), self.kernel_flavor)
+        vendors = self.gpu_info.get("vendors", [self.gpu_info.get("vendor", "Unknown")])
+        self.gpu_profiles = DriverProfiles.get_gpu_profiles(vendors, self.kernel_flavor)
         main_box.append(self._create_profile_widgets(self.gpu_profiles, "GPU"))
 
         self.stack.add_named(scrolled, _("GPU"))
@@ -322,21 +436,20 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(900)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
-        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
+        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"), description=_("Network interfaces detected by system prober"))
         main_box.append(hw_group)
 
         hw_list = Gtk.ListBox()
@@ -347,26 +460,23 @@ class MainWindow(Adw.ApplicationWindow):
         if nets:
             for net in nets:
                 driver_text = net['driver'] if net['driver'] else _('None')
-                sub = f"{_('Driver')}: {driver_text}"
+                sub = f"{_('Driver in use')}: {driver_text}"
                 row = Adw.ActionRow(title=net['name'], subtitle=sub)
 
                 status_badge = Gtk.Image()
-                status_badge.set_from_icon_name("media-record-symbolic")
-                status_badge.set_pixel_size(10)
-                if net['driver']:
+                if net['driver'] or self.manager.is_package_installed("networkmanager"):
+                    status_badge.set_from_icon_name("emblem-ok-symbolic")
                     status_badge.add_css_class("success-icon")
                 else:
+                    status_badge.set_from_icon_name("dialog-warning-symbolic")
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-
                 hw_list.append(row)
         else:
             hw_group.set_visible(False)
             status_page = Adw.StatusPage()
             status_page.set_title(_("No Network devices detected"))
             status_page.set_icon_name("network-wireless-symbolic")
-            status_page.set_vexpand(True)
-            status_page.set_hexpand(True)
             main_box.append(status_page)
 
         self.net_profiles = DriverProfiles.get_network_profiles()
@@ -377,21 +487,20 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(900)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
-        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
+        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"), description=_("Audio cards and controllers detected"))
         main_box.append(hw_group)
 
         hw_list = Gtk.ListBox()
@@ -402,26 +511,23 @@ class MainWindow(Adw.ApplicationWindow):
         if auds:
             for aud in auds:
                 driver_text = aud['driver'] if aud['driver'] else _('None')
-                sub = f"{_('Driver')}: {driver_text}"
+                sub = f"{_('Driver in use')}: {driver_text}"
                 row = Adw.ActionRow(title=aud['name'], subtitle=sub)
 
                 status_badge = Gtk.Image()
-                status_badge.set_from_icon_name("media-record-symbolic")
-                status_badge.set_pixel_size(10)
                 if aud['driver']:
+                    status_badge.set_from_icon_name("emblem-ok-symbolic")
                     status_badge.add_css_class("success-icon")
                 else:
+                    status_badge.set_from_icon_name("dialog-warning-symbolic")
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-
                 hw_list.append(row)
         else:
             hw_group.set_visible(False)
             status_page = Adw.StatusPage()
             status_page.set_title(_("No Audio devices detected"))
             status_page.set_icon_name("audio-card-symbolic")
-            status_page.set_vexpand(True)
-            status_page.set_hexpand(True)
             main_box.append(status_page)
 
         self.audio_profiles = DriverProfiles.get_audio_profiles()
@@ -432,21 +538,20 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(900)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
 
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         main_box.set_vexpand(False)
         clamp.set_child(main_box)
 
-        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"))
+        hw_group = Adw.PreferencesGroup(title=_("Detected Hardware"), description=_("Bluetooth controllers and USB adapters"))
         main_box.append(hw_group)
 
         hw_list = Gtk.ListBox()
@@ -456,8 +561,8 @@ class MainWindow(Adw.ApplicationWindow):
         bts = [d for d in self.hardware_devices if d['category'] == 'Bluetooth']
         if bts:
             for bt in bts:
-                driver_text = bt['driver'] if bt['driver'] else _('None')
-                sub = f"{_('Driver')}: {driver_text}"
+                driver_text = bt['driver'] if bt['driver'] else _('btusb')
+                sub = f"{_('Driver in use')}: {driver_text}"
 
                 if bt.get('service_active') is False:
                     sub += f" | {_('No Bluetooth service running')}"
@@ -469,22 +574,19 @@ class MainWindow(Adw.ApplicationWindow):
                 row = Adw.ActionRow(title=bt['name'], subtitle=sub)
 
                 status_badge = Gtk.Image()
-                status_badge.set_from_icon_name("media-record-symbolic")
-                status_badge.set_pixel_size(10)
-                if bt['driver']:
+                if bt['driver'] or SystemProber.is_bluetooth_service_running() or self.manager.is_package_installed("parch-bluetooth") or self.manager.is_package_installed("bluez"):
+                    status_badge.set_from_icon_name("emblem-ok-symbolic")
                     status_badge.add_css_class("success-icon")
                 else:
+                    status_badge.set_from_icon_name("dialog-warning-symbolic")
                     status_badge.add_css_class("warning-icon")
                 row.add_prefix(status_badge)
-
                 hw_list.append(row)
         else:
             hw_group.set_visible(False)
             status_page = Adw.StatusPage()
             status_page.set_title(_("No Bluetooth devices detected"))
-            status_page.set_icon_name("bluetooth-symbolic")
-            status_page.set_vexpand(True)
-            status_page.set_hexpand(True)
+            status_page.set_icon_name("preferences-system-bluetooth-symbolic")
             main_box.append(status_page)
 
         self.bt_profiles = DriverProfiles.get_bluetooth_profiles()
@@ -495,21 +597,20 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(900)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled.set_child(clamp)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         box.set_vexpand(False)
         clamp.set_child(box)
 
-        info_group = Adw.PreferencesGroup(title=_("Hardware"))
+        info_group = Adw.PreferencesGroup(title=_("Hardware Configuration"))
         box.append(info_group)
 
         cpu_row = Adw.ActionRow(title=_("Processor"))
@@ -519,7 +620,7 @@ class MainWindow(Adw.ApplicationWindow):
         vendor_row = Adw.ActionRow(title=_("GPU"))
         gpu_text = self.gpu_info.get("vendor", "Unknown")
         if self.gpu_info.get("model"):
-            gpu_text = f"{gpu_text} - {self.gpu_info.get('model')}"
+            gpu_text = f"{gpu_text} ({self.gpu_info.get('model')})"
         vendor_row.set_subtitle(gpu_text)
         info_group.add(vendor_row)
 
@@ -527,7 +628,7 @@ class MainWindow(Adw.ApplicationWindow):
         memory_row.set_subtitle(self.system_info.get("memory", "Unknown"))
         info_group.add(memory_row)
 
-        system_group = Adw.PreferencesGroup(title=_("System"))
+        system_group = Adw.PreferencesGroup(title=_("System Environment"))
         box.append(system_group)
 
         if self.system_info.get("vendor") or self.system_info.get("model"):
@@ -537,7 +638,7 @@ class MainWindow(Adw.ApplicationWindow):
             system_group.add(device_row)
 
         os_row = Adw.ActionRow(title=_("Operating System"))
-        os_row.set_subtitle(self.system_info.get("os", "Unknown"))
+        os_row.set_subtitle(self.system_info.get("os", "Parch GNU/Linux"))
         system_group.add(os_row)
 
         kernel_row = Adw.ActionRow(title=_("Kernel"))
@@ -552,7 +653,7 @@ class MainWindow(Adw.ApplicationWindow):
         session_row.set_subtitle(self.session_type.upper())
         system_group.add(session_row)
 
-        features_group = Adw.PreferencesGroup(title=_("Features"))
+        features_group = Adw.PreferencesGroup(title=_("Platform Features"))
         box.append(features_group)
 
         hybrid_row = Adw.ActionRow(title=_("Hybrid Graphics"))
@@ -573,9 +674,9 @@ class MainWindow(Adw.ApplicationWindow):
         scrolled_outer.set_vexpand(True)
 
         clamp = Adw.Clamp()
-        clamp.set_maximum_size(900)
-        clamp.set_margin_top(24)
-        clamp.set_margin_bottom(24)
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
         clamp.set_margin_start(12)
         clamp.set_margin_end(12)
         scrolled_outer.set_child(clamp)
@@ -586,13 +687,13 @@ class MainWindow(Adw.ApplicationWindow):
         header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         box.append(header_box)
 
-        log_label = Gtk.Label(label=_("Operation log"))
+        log_label = Gtk.Label(label=_("Operation Log"))
         log_label.set_xalign(0)
         log_label.add_css_class("title-3")
         log_label.set_hexpand(True)
         header_box.append(log_label)
 
-        clear_button = Gtk.Button(label=_("Clear"))
+        clear_button = Gtk.Button(label=_("Clear Logs"))
         clear_button.set_icon_name("edit-clear-symbolic")
         clear_button.add_css_class("flat")
         clear_button.connect("clicked", self.on_clear_logs)
@@ -600,7 +701,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_min_content_height(300)
+        scrolled.set_min_content_height(320)
         scrolled.add_css_class("card")
         box.append(scrolled)
 
@@ -621,45 +722,49 @@ class MainWindow(Adw.ApplicationWindow):
     def on_sidebar_selected(self, listbox, row):
         if row:
             title = row.get_title()
-            self.content_title.set_label(title)
+            subtitles = {
+                _("GPU"): _("Graphics Drivers"),
+                _("Network"): _("Network Interfaces"),
+                _("Audio"): _("Audio Stack"),
+                _("Bluetooth"): _("Bluetooth Services"),
+                _("System Info"): _("Hardware and OS Details"),
+                _("Logs"): _("Activity and Event Logs")
+            }
+            subtitle = subtitles.get(title, _("Parch Driver Manager"))
+            self.content_window_title.set_title(title)
+            self.content_window_title.set_subtitle(subtitle)
             self.stack.set_visible_child_name(title)
+            self.current_category = title
 
-            if title == _("GPU"):
-                self.profiles = self.gpu_profiles
-            elif title == _("Network"):
-                self.profiles = self.net_profiles
-            elif title == _("Audio"):
-                self.profiles = self.audio_profiles
-            elif title == _("Bluetooth"):
-                self.profiles = self.bt_profiles
-            else:
-                self.profiles = []
+            # Close overlay sidebar automatically in mobile collapsed mode
+            if self.split_view.get_collapsed():
+                self.split_view.set_show_sidebar(False)
 
-    def on_profile_row_activated(self, row: Adw.ActionRow, idx: int, category: str):
-        profiles_attr = f"{category.lower()}_profiles"
-        profiles = getattr(self, profiles_attr, [])
-
-        if idx < len(profiles):
-            self.current_profile = profiles[idx]
-            self.current_category = category
-            self._show_toast(f"\u2713 {self.current_profile.name}")
+    def _progress_callback(self, msg: str):
+        self.log_buffer.append(msg)
 
     def _run_in_thread(self, target: Callable, *args, **kwargs):
+        if self.current_operation and self.current_operation.is_alive():
+            self._show_toast(_("An operation is already in progress."), timeout=4)
+            return
+
         def wrapper():
             try:
                 target(*args, **kwargs)
             except CommandError as e:
-                msg = f"\u2717 Command error: {' '.join(e.cmd)}\nExit code: {e.returncode}\n{e.stderr}"
-                logger.debug(msg)
-                GLib.idle_add(self._show_toast, _("Operation failed. See log for details."))
+                msg = f"❌ Command error: {' '.join(e.cmd)}\nExit code: {e.returncode}\n{e.stderr}"
+                logger.error(msg)
+                GLib.idle_add(self._show_toast, f"{_('Operation failed')}: {e.stderr.strip() or 'Exit code ' + str(e.returncode)}", 6)
                 GLib.idle_add(self._end_operation)
                 self.log_buffer.append(msg)
             except Exception as e:
-                msg = f"\u2717 Unexpected exception: {e}"
-                logger.debug(msg)
-                GLib.idle_add(self._show_toast, _("Unexpected error. See log for details."))
+                msg = f"❌ Unexpected error: {e}"
+                logger.error(msg, exc_info=True)
+                GLib.idle_add(self._show_toast, f"{_('Unexpected error')}: {e}", 6)
                 GLib.idle_add(self._end_operation)
                 self.log_buffer.append(msg)
+            finally:
+                self.current_operation = None
 
         self.current_operation = threading.Thread(target=wrapper, daemon=True)
         self.current_operation.start()
@@ -667,16 +772,24 @@ class MainWindow(Adw.ApplicationWindow):
     def _start_operation(self):
         self.progress_bar.set_visible(True)
         self.progress_bar.pulse()
-        GLib.timeout_add(100, self._pulse_progress)
+        if self._progress_timeout_id:
+            GLib.source_remove(self._progress_timeout_id)
+        self._progress_timeout_id = GLib.timeout_add(100, self._pulse_progress)
+        self.set_sensitive(False)
 
     def _pulse_progress(self):
         if self.progress_bar.get_visible():
             self.progress_bar.pulse()
             return True
+        self._progress_timeout_id = None
         return False
 
     def _end_operation(self):
         self.progress_bar.set_visible(False)
+        if self._progress_timeout_id:
+            GLib.source_remove(self._progress_timeout_id)
+            self._progress_timeout_id = None
+        self.set_sensitive(True)
 
     def on_clear_logs(self, button):
         buffer = self.log_view.get_buffer()
@@ -684,34 +797,18 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _load_css(self):
         css_provider = Gtk.CssProvider()
-        css = """
-        .navigation-sidebar row {
-            min-height: 40px;
-            padding: 4px 8px;
-        }
-
-        .navigation-sidebar row label.title {
-            font-size: 0.9em;
-        }
-
-        .navigation-sidebar row image {
-            margin-right: 4px;
-            opacity: 0.8;
-        }
-
-        .success-icon {
-            color: @success_color;
-        }
-        .warning-icon {
-            color: @warning_color;
-        }
-        .card {
-            background: @window_bg_color;
-            border-radius: 12px;
-            padding: 2px;
-        }
-        """
-        css_provider.load_from_data(css.encode())
+        css_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "style.css")
+        if os.path.exists(css_path):
+            css_provider.load_from_path(css_path)
+        else:
+            css = """
+            .navigation-sidebar row { min-height: 44px; padding: 6px 12px; }
+            .success-icon { color: @success_color; }
+            .warning-icon { color: @warning_color; }
+            .card { background: @card_bg_color; border-radius: 12px; padding: 4px; }
+            .pill { border-radius: 9999px; padding: 4px 16px; font-weight: 600; }
+            """
+            css_provider.load_from_data(css.encode())
         Gtk.StyleContext.add_provider_for_display(
             self.get_display(),
             css_provider,
@@ -721,17 +818,14 @@ class MainWindow(Adw.ApplicationWindow):
     def on_refresh_hardware(self, _button=None):
         def refresh():
             GLib.idle_add(self._start_operation)
-            SystemProber.clear_lspci_cache()
-            self.hardware_devices = SystemProber.get_hardware_devices()
-            self.gpu_info = SystemProber.get_gpu_info()
+            SystemProber.clear_hw_cache()
+            self._probe_hardware()
+            GLib.idle_add(self._rebuild_all_pages)
+            GLib.idle_add(self._populate_sidebar)
             GLib.idle_add(self._end_operation)
-            GLib.idle_add(self._show_toast, "Hardware detection refreshed.")
+            GLib.idle_add(self._show_toast, _("Hardware detection refreshed."))
 
         self._run_in_thread(refresh)
-
-    def _check_packages_installed(self, packages: List[str]) -> bool:
-        code, _, _ = SystemProber.run_command(["pacman", "-Q"] + packages)
-        return code == 0
 
     def _on_alert_response(self, dialog, result, action):
         response = dialog.choose_finish(result)
@@ -751,109 +845,87 @@ class MainWindow(Adw.ApplicationWindow):
         dialog.set_close_response("cancel")
         dialog.choose(self, None, self._on_alert_response, on_confirm)
 
-    def on_install_clicked(self, button: Gtk.Button, category: str = None):
-        if not self.current_profile:
-            self._show_toast(_("No profile selected."))
-            return
-
+    def on_install_clicked_for_profile(self, profile: DriverProfile, category: str):
         self._show_confirm_dialog(
             _("Are you sure?"),
-            _("This action will install the driver packages."),
-            self._do_install,
+            f"{_('This action will install driver packages for')} {profile.name}.",
+            lambda: self._do_install(profile, category),
         )
 
-    def _do_install(self):
-
-        def progress(msg: str):
-            self.log_buffer.append(msg)
-
+    def _do_install(self, profile: DriverProfile, category: str):
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"\u27a4 {_('Starting installation')}: {self.current_profile.name}")
-            self.manager.install_profile(self.current_profile, progress_cb=progress)
-            self.log_buffer.append(f"\u2713 {_('Profile installation finished.')}")
+            self.log_buffer.append(f"➔ {_('Starting installation')}: {profile.name}")
+            self.manager.install_profile(profile, progress_cb=self._progress_callback)
+            self.log_buffer.append(f"✓ {_('Profile installation finished.')}")
+            GLib.idle_add(self._refresh_profile_widgets, category)
+            GLib.idle_add(self._populate_sidebar)
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Profile installed successfully."))
 
         self._run_in_thread(task)
 
-    def on_remove_clicked(self, button: Gtk.Button, category: str = None):
-        if not self.current_profile:
-            self._show_toast(_("No profile selected."))
-            return
-
+    def on_remove_clicked_for_profile(self, profile: DriverProfile, category: str):
         self._show_confirm_dialog(
             _("Are you sure?"),
-            _("This action will remove the driver packages."),
-            self._do_remove,
+            f"{_('This action will remove driver packages for')} {profile.name}.",
+            lambda: self._do_remove(profile, category),
             destructive=True,
         )
 
-    def _do_remove(self):
-
-        def progress(msg: str):
-            self.log_buffer.append(msg)
-
+    def _do_remove(self, profile: DriverProfile, category: str):
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"\u27a4 {_('Starting removal')}: {self.current_profile.name}")
-            self.manager.remove_profile(self.current_profile, progress_cb=progress)
-            self.log_buffer.append(f"\u2713 {_('Profile removal finished.')}")
+            self.log_buffer.append(f"➔ {_('Starting removal')}: {profile.name}")
+            self.manager.remove_profile(profile, progress_cb=self._progress_callback)
+            self.log_buffer.append(f"✓ {_('Profile removal finished.')}")
+            GLib.idle_add(self._refresh_profile_widgets, category)
+            GLib.idle_add(self._populate_sidebar)
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Profile removed successfully."))
 
         self._run_in_thread(task)
 
-    def on_disable_clicked(self, button: Gtk.Button, category: str = None):
-        if not self.current_profile:
-            self._show_toast(_("No profile selected."))
-            return
-        if not self.current_profile.module:
-            self._show_toast(_("This profile has no associated kernel module to disable."))
-            return
-
+    def on_disable_clicked_for_profile(self, profile: DriverProfile, category: str):
         self._show_confirm_dialog(
             _("Are you sure?"),
-            _("This action will disable the hardware module."),
-            self._do_disable,
+            f"{_('This action will disable module')} {profile.module}.",
+            lambda: self._do_disable(profile, category),
             destructive=True,
         )
 
-    def _do_disable(self):
-
-        def progress(msg: str):
-            self.log_buffer.append(msg)
-
+    def _do_disable(self, profile: DriverProfile, category: str):
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"\u27a4 {_('Disabling hardware module')}: {self.current_profile.name}")
-            self.manager.disable_driver(self.current_profile, progress_cb=progress)
+            self.log_buffer.append(f"➔ {_('Disabling hardware module')}: {profile.name}")
+            self.manager.disable_driver(profile, progress_cb=self._progress_callback)
+            GLib.idle_add(self._refresh_profile_widgets, category)
+            GLib.idle_add(self._populate_sidebar)
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Hardware disabled. Reboot might be required."))
 
         self._run_in_thread(task)
 
-    def on_enable_clicked(self, button: Gtk.Button, category: str = None):
-        if not self.current_profile:
-            self._show_toast(_("No profile selected."))
-            return
-        if not self.current_profile.module:
-            self._show_toast(_("This profile has no associated kernel module to enable."))
-            return
+    def on_enable_clicked_for_profile(self, profile: DriverProfile, category: str):
+        self._show_confirm_dialog(
+            _("Are you sure?"),
+            f"{_('This action will enable module')} {profile.module}.",
+            lambda: self._do_enable(profile, category),
+        )
 
-        def progress(msg: str):
-            self.log_buffer.append(msg)
-
+    def _do_enable(self, profile: DriverProfile, category: str):
         def task():
             GLib.idle_add(self._start_operation)
-            self.log_buffer.append(f"\u27a4 {_('Enabling hardware module')}: {self.current_profile.name}")
-            self.manager.enable_driver(self.current_profile, progress_cb=progress)
+            self.log_buffer.append(f"➔ {_('Enabling hardware module')}: {profile.name}")
+            self.manager.enable_driver(profile, progress_cb=self._progress_callback)
+            GLib.idle_add(self._refresh_profile_widgets, category)
+            GLib.idle_add(self._populate_sidebar)
             GLib.idle_add(self._end_operation)
             GLib.idle_add(self._show_toast, _("Hardware enabled."))
 
         self._run_in_thread(task)
 
-    def _show_toast(self, text: str):
+    def _show_toast(self, text: str, timeout: int = 3):
         toast = Adw.Toast.new(text)
-        toast.set_timeout(3)
+        toast.set_timeout(timeout)
         self.toast_overlay.add_toast(toast)
