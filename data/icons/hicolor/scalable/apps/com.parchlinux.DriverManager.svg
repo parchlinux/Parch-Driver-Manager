@@ -1,29 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+<svg width="512" height="512" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2dd4bf"/>
-      <stop offset="100%" stop-color="#0d9488"/>
-    </linearGradient>
-    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1e293b"/>
-      <stop offset="100%" stop-color="#0f172a"/>
+    <linearGradient id="parchPlate" x1="64" y1="8" x2="64" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00FF95"/>
+      <stop offset="0.5" stop-color="#00A9FF"/>
+      <stop offset="1" stop-color="#0080FF"/>
     </linearGradient>
   </defs>
-  <rect x="4" y="4" width="120" height="120" rx="28" ry="28" fill="url(#bg)"/>
-  <rect x="30" y="30" width="68" height="68" rx="8" ry="8" fill="url(#chip)"/>
-  <rect x="38" y="38" width="52" height="52" rx="4" ry="4" fill="#334155"/>
-  <path d="M50 52 L50 76 L78 76 L78 52 Z" fill="#475569"/>
-  <rect x="56" y="58" width="16" height="10" rx="2" fill="#2dd4bf"/>
-  <rect x="60" y="48" width="8" height="4" rx="1" fill="#5eead4"/>
-  <rect x="60" y="76" width="8" height="4" rx="1" fill="#5eead4"/>
-  <rect x="48" y="62" width="4" height="4" rx="1" fill="#5eead4"/>
-  <rect x="76" y="62" width="4" height="4" rx="1" fill="#5eead4"/>
-  <line x1="34" y1="40" x2="22" y2="28" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="94" y1="40" x2="106" y2="28" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="34" y1="88" x2="22" y2="100" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="94" y1="88" x2="106" y2="100" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="64" y1="26" x2="64" y2="16" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="64" y1="102" x2="64" y2="112" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="26" y1="64" x2="16" y2="64" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
-  <line x1="112" y1="64" x2="102" y2="64" stroke="#2dd4bf" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- squircle base plate -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#parchPlate)"/>
+
+  <!-- chip pins: top -->
+  <rect x="46" y="26" width="6" height="14" rx="2" fill="white"/>
+  <rect x="61" y="26" width="6" height="14" rx="2" fill="white"/>
+  <rect x="76" y="26" width="6" height="14" rx="2" fill="white"/>
+
+  <!-- chip pins: bottom -->
+  <rect x="46" y="88" width="6" height="14" rx="2" fill="white"/>
+  <rect x="61" y="88" width="6" height="14" rx="2" fill="white"/>
+  <rect x="76" y="88" width="6" height="14" rx="2" fill="white"/>
+
+  <!-- chip pins: left -->
+  <rect x="26" y="46" width="14" height="6" rx="2" fill="white"/>
+  <rect x="26" y="61" width="14" height="6" rx="2" fill="white"/>
+  <rect x="26" y="76" width="14" height="6" rx="2" fill="white"/>
+
+  <!-- chip pins: right -->
+  <rect x="88" y="46" width="14" height="6" rx="2" fill="white"/>
+  <rect x="88" y="61" width="14" height="6" rx="2" fill="white"/>
+  <rect x="88" y="76" width="14" height="6" rx="2" fill="white"/>
+
+  <!-- chip body -->
+  <rect x="40" y="40" width="48" height="48" rx="10" fill="white"/>
+
+  <!-- chip core mark, cut from body for contrast -->
+  <rect x="56" y="56" width="16" height="16" rx="4" fill="#0080FF"/>
 </svg>

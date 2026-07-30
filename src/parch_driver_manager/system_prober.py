@@ -67,7 +67,7 @@ class SystemProber:
             name = parts[-1] if len(parts) > 6 else parts[5] if len(parts) > 5 else ""
             lower = name.lower()
             if 'bluetooth' in lower or lower.endswith('bt'):
-                key = "bluetooth_usb"
+                key = f"bluetooth_usb_{name}"
                 if key in seen:
                     continue
                 seen.add(key)
@@ -78,46 +78,6 @@ class SystemProber:
                     'category': 'Bluetooth',
                     'driver': driver,
                     'modules': ['btusb'] if bt_module_loaded else [],
-                    'bus': 'usb',
-                })
-            elif 'wireless' in lower or 'wifi' in lower or 'wlan' in lower:
-                key = f"net_usb_{name}"
-                if key in seen:
-                    continue
-                seen.add(key)
-                devices.append({
-                    'pci': '',
-                    'name': name,
-                    'category': 'Network',
-                    'driver': None,
-                    'modules': [],
-                    'bus': 'usb',
-                })
-        return devices
-        code, out, err = SystemProber.run_command(["lsusb"])
-        if code != 0:
-            return []
-        devices = []
-        seen = set()
-        for line in out.splitlines():
-            if not line.strip():
-                continue
-            parts = line.split(None, 6)
-            if len(parts) < 6:
-                continue
-            name = parts[-1] if len(parts) > 6 else parts[5] if len(parts) > 5 else ""
-            lower = name.lower()
-            if 'bluetooth' in lower or 'bt' == lower.split()[-1]:
-                key = "bluetooth_usb"
-                if key in seen:
-                    continue
-                seen.add(key)
-                devices.append({
-                    'pci': '',
-                    'name': name,
-                    'category': 'Bluetooth',
-                    'driver': None,
-                    'modules': [],
                     'bus': 'usb',
                 })
             elif 'wireless' in lower or 'wifi' in lower or 'wlan' in lower:
@@ -188,6 +148,7 @@ class SystemProber:
     @staticmethod
     def clear_hw_cache() -> None:
         SystemProber._hw_cache = None
+        SystemProber._lspci_cache = None
 
     @staticmethod
     def get_hardware_devices(force: bool = False) -> List[Dict[str, Any]]:
@@ -273,14 +234,15 @@ class SystemProber:
     @staticmethod
     def get_gpu_info() -> Dict[str, Any]:
         lspci = SystemProber.get_lspci()
-        vendor = "Unknown"
-        gpu_model = ""
+        vendors = set()
+        models = []
 
         for line in lspci.splitlines():
             lower = line.lower()
             if ("vga compatible controller" in lower or
                 "3d controller" in lower or
                 "display controller" in lower):
+                vendor = None
                 if "intel corporation" in lower or "[8086:" in lower:
                     vendor = "Intel"
                 elif "nvidia" in lower or "[10de:" in lower:
@@ -289,13 +251,21 @@ class SystemProber:
                       "advanced micro devices" in lower or "[1002:" in lower):
                     vendor = "AMD"
 
+                if vendor:
+                    vendors.add(vendor)
+
                 if ':' in line and ']' in line:
                     parts = line.split(':', 1)
                     if len(parts) > 1:
-                        gpu_model = parts[1].split('[')[0].strip()
-                break
+                        model = parts[1].split('[')[0].strip()
+                        if model and model not in models:
+                            models.append(model)
 
-        return {"vendor": vendor, "model": gpu_model, "raw": lspci}
+        vendor_list = sorted(list(vendors))
+        main_vendor = ", ".join(vendor_list) if vendor_list else "Unknown"
+        gpu_model = ", ".join(models) if models else ""
+
+        return {"vendor": main_vendor, "vendors": vendor_list, "model": gpu_model, "raw": lspci}
 
     @staticmethod
     def get_session_type() -> str:
@@ -356,7 +326,8 @@ class SystemProber:
                     if "model name" in line:
                         info['cpu'] = line.split(':', 1)[1].strip()
                         break
-        except:
+        except Exception as e:
+            logger.debug("Failed to read cpuinfo: %s", e)
             info['cpu'] = "Unknown"
 
         try:
@@ -367,13 +338,15 @@ class SystemProber:
                         gb = round(kb / 1024 / 1024, 1)
                         info['memory'] = f"{gb} GB"
                         break
-        except:
+        except Exception as e:
+            logger.debug("Failed to read meminfo: %s", e)
             info['memory'] = "Unknown"
 
         try:
             code, out, err = SystemProber.run_command(["hostnamectl", "hostname"])
             info['hostname'] = out.strip() if code == 0 else "Unknown"
-        except:
+        except Exception as e:
+            logger.debug("Failed to run hostnamectl: %s", e)
             info['hostname'] = "Unknown"
 
         try:
@@ -388,7 +361,8 @@ class SystemProber:
                     info['vendor'] = line.split(':', 1)[1].strip()
                 elif "Hardware Model:" in line:
                     info['model'] = line.split(':', 1)[1].strip()
-        except:
+        except Exception as e:
+            logger.debug("Failed to run hostnamectl: %s", e)
             pass
 
         return info

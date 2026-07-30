@@ -5,6 +5,7 @@ from typing import Optional
 
 APP_ID = "com.parchlinux.DriverManager"
 DOMAIN = "parch-driver-manager"
+RTL_LANGUAGES = {"fa", "ar", "he", "ur"}
 
 
 def _get_locale_dir() -> str:
@@ -19,12 +20,12 @@ def get_language() -> str:
         lang, _ = locale.getlocale(locale.LC_MESSAGES)
         if lang:
             return lang.split("_")[0]
-    except:
+    except Exception:
         pass
     try:
         lang = os.environ.get("LANG", "en_US").split("_")[0]
         return lang
-    except:
+    except Exception:
         return "en"
 
 
@@ -39,18 +40,18 @@ except locale.Error:
         locale.setlocale(locale.LC_ALL, "C")
 
 _current_lang = get_language()
-if _current_lang not in ("fa", "en"):
+if _current_lang not in ("fa", "en", "ar", "he", "ur"):
     _current_lang = "en"
 
 try:
     _trans = gettext.translation(DOMAIN, _get_locale_dir(), languages=[_current_lang])
     _trans.install()
     _ = _trans.gettext
-except:
+except Exception:
     import builtins
     builtins.__dict__["_"] = lambda msg: msg
     _ = lambda msg: msg
 
 
 def is_rtl() -> bool:
-    return _current_lang == "fa"
+    return _current_lang in RTL_LANGUAGES

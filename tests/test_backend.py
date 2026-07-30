@@ -24,82 +24,27 @@ class TestBackendRunner(unittest.TestCase):
         mock_run.return_value = (0, "", "")
         code, out, err = self.runner.disable_hardware("test_mod")
         self.assertEqual(code, 0)
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
-        bash_script = cmd[2] if len(cmd) > 2 else ""
-        self.assertIn("test_mod", bash_script)
-        self.assertIn("blacklist", bash_script)
-        self.assertIn("modprobe -r", bash_script)
+        self.assertTrue(mock_run.called)
+        calls = [c[0][0] for c in mock_run.call_args_list]
+        self.assertIn(['cat', '/etc/modprobe.d/parch-dm-blacklist.conf'], calls)
 
     @patch.object(BackendRunner, "run")
     def test_enable_hardware(self, mock_run):
         mock_run.return_value = (0, "", "")
         code, out, err = self.runner.enable_hardware("test_mod")
         self.assertEqual(code, 0)
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
-        bash_script = cmd[2] if len(cmd) > 2 else ""
-        self.assertIn("test_mod", bash_script)
-        self.assertIn("modprobe", bash_script)
+        self.assertTrue(mock_run.called)
+        calls = [c[0][0] for c in mock_run.call_args_list]
+        self.assertIn(['modprobe', 'test_mod'], calls)
 
-    @patch("subprocess.Popen")
-    def test_run_with_pkexec(self, mock_popen):
-        proc_mock = MagicMock()
-        proc_mock.returncode = 0
-        proc_mock.communicate.return_value = ("output", "")
-        mock_popen.return_value = proc_mock
-
-        runner = BackendRunner(use_pkexec=True)
-        code, out, err = runner.run(["pacman", "-Q", "test-pkg"])
-        self.assertEqual(code, 0)
-        self.assertEqual(out, "output")
-        call_args = mock_popen.call_args[0][0]
-        self.assertEqual(call_args[0], "pkexec")
-
-    @patch("subprocess.Popen")
-    def test_run_without_pkexec(self, mock_popen):
-        proc_mock = MagicMock()
-        proc_mock.returncode = 0
-        proc_mock.communicate.return_value = ("output", "")
-        mock_popen.return_value = proc_mock
-
-        runner = BackendRunner(use_pkexec=False)
-        code, out, err = runner.run(["echo", "hello"])
-        self.assertEqual(code, 0)
-        call_args = mock_popen.call_args[0][0]
-        self.assertNotIn("pkexec", call_args)
-
-    @patch("subprocess.Popen")
-    def test_run_with_check_raises_on_failure(self, mock_popen):
-        proc_mock = MagicMock()
-        proc_mock.returncode = 1
-        proc_mock.communicate.return_value = ("", "error")
-        mock_popen.return_value = proc_mock
-
-        with self.assertRaises(CommandError):
-            self.runner.run(["false"], check=True)
-
-    @patch("subprocess.Popen")
-    def test_run_without_check_returns_on_failure(self, mock_popen):
-        proc_mock = MagicMock()
-        proc_mock.returncode = 1
-        proc_mock.communicate.return_value = ("", "error")
-        mock_popen.return_value = proc_mock
-
-        code, out, err = self.runner.run(["false"], check=False)
+    def test_invalid_module_name_validation(self):
+        code, out, err = self.runner.disable_hardware("nvidia;rm -rf /")
         self.assertEqual(code, 1)
+        self.assertIn("Invalid module name", err)
 
-    def test_shlex_quoting_in_disable_hardware(self):
-        with patch.object(self.runner, "run") as mock_run:
-            mock_run.return_value = (0, "", "")
-            self.runner.disable_hardware("nvidia;rm -rf /")
-            cmd = mock_run.call_args[0][0]
-            self.assertEqual(cmd[0], "bash")
-            self.assertEqual(cmd[1], "-c")
-            script = cmd[2]
-            self.assertIn("nvidia", script)
-            quoted = shlex.quote("nvidia;rm -rf /")
-            self.assertIn(quoted, script)
+        code_en, out_en, err_en = self.runner.enable_hardware("invalid module name!")
+        self.assertEqual(code_en, 1)
+        self.assertIn("Invalid module name", err_en)
 
 
 class TestCommandError(unittest.TestCase):

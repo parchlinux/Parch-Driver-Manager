@@ -1,8 +1,11 @@
+import logging
 from typing import List, Callable, Optional
 
 from .system_prober import SystemProber
 from .backend import BackendRunner
 from .profiles import DriverProfile
+
+logger = logging.getLogger(__name__)
 
 
 class DriverManager:
@@ -21,29 +24,37 @@ class DriverManager:
 
     def install_profile(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):
         pkgs_to_install = [p for p in profile.packages if not self.is_package_installed(p)]
-        if not pkgs_to_install:
+        if pkgs_to_install:
+            if progress_cb: progress_cb(f"Installing: {' '.join(pkgs_to_install)}")
+            self.backend.run(["pacman", "-S", "--needed", "--noconfirm"] + pkgs_to_install, check=True)
+        else:
             if progress_cb: progress_cb("All packages in this profile are already installed.")
-            return
-
-        if progress_cb: progress_cb(f"Installing: {' '.join(pkgs_to_install)}")
-        self.backend.run(["pacman", "-S", "--needed", "--noconfirm"] + pkgs_to_install, check=True)
 
         if profile.post_install:
-            if progress_cb: progress_cb("Running post-install steps\u2026")
-            profile.post_install(self.backend)
+            if progress_cb: progress_cb("Running post-install steps…")
+            try:
+                profile.post_install(self.backend)
+            except Exception as e:
+                logger.error("Post-install hook failed for profile %s: %s", profile.name, e)
+                if progress_cb: progress_cb(f"Error during post-install: {e}")
+                raise
 
     def remove_profile(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):
         pkgs_to_remove = [p for p in profile.packages if self.is_package_installed(p)]
-        if not pkgs_to_remove:
+        if pkgs_to_remove:
+            if progress_cb: progress_cb(f"Removing: {' '.join(pkgs_to_remove)}")
+            self.backend.run(["pacman", "-Rns", "--noconfirm"] + pkgs_to_remove, check=True)
+        else:
             if progress_cb: progress_cb("None of the packages in this profile are installed.")
-            return
-
-        if progress_cb: progress_cb(f"Removing: {' '.join(pkgs_to_remove)}")
-        self.backend.run(["pacman", "-Rns", "--noconfirm"] + pkgs_to_remove, check=True)
 
         if profile.post_remove:
-            if progress_cb: progress_cb("Running post-remove steps\u2026")
-            profile.post_remove(self.backend)
+            if progress_cb: progress_cb("Running post-remove steps…")
+            try:
+                profile.post_remove(self.backend)
+            except Exception as e:
+                logger.error("Post-remove hook failed for profile %s: %s", profile.name, e)
+                if progress_cb: progress_cb(f"Error during post-remove: {e}")
+                raise
 
     def disable_driver(self, profile: DriverProfile, progress_cb: Optional[Callable[[str], None]] = None):
         if not profile.module:
