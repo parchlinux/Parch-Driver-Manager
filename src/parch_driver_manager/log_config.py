@@ -21,7 +21,7 @@ def setup_logging(debug: bool = False) -> None:
     log_file = os.path.join(cache_dir, "parch-dm.log")
 
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.DEBUG if debug_env else logging.INFO)
     file_handler.setFormatter(logging.Formatter(log_format))
     parch_logger.addHandler(file_handler)
 
