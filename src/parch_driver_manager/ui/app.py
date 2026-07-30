@@ -13,12 +13,10 @@ class ParchDriverManagerApp(Adw.Application):
     def __init__(self):
         super().__init__(
             application_id=APP_ID,
-            flags=Gio.ApplicationFlags.FLAGS_NONE,
+            flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
         )
 
-        settings = Gtk.Settings.get_default()
-        if settings:
-            settings.set_property("gtk-application-prefer-dark-theme", False)
+        self._apply_theme()
 
         about_action = Gio.SimpleAction.new("about", None)
         about_action.connect("activate", self._on_about)
@@ -36,20 +34,52 @@ class ParchDriverManagerApp(Adw.Application):
 
         self.set_accels_for_action("win.refresh", ["<primary>r"])
 
+    def _apply_theme(self):
+        try:
+            settings = Gio.Settings.new("com.parchlinux.driver-manager")
+            theme = settings.get_string("theme")
+        except GLib.Error:
+            theme = "auto"
+
+        style_manager = Adw.StyleManager.get_default()
+        if theme == "dark":
+            style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+        elif theme == "light":
+            style_manager.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+        else:
+            style_manager.set_color_scheme(Adw.ColorScheme.PREFER_LIGHT)
+
     def _on_about(self, _action, _param):
         win = self.props.active_window
         if not win:
             return
+        changelog = (
+            "<p>Changes in version 1.0.1:</p>"
+            "<ul>"
+            "<li>NVIDIA Driver Upgrade: Set nvidia-open (open-source kernel modules) as the primary NVIDIA driver.</li>"
+            "<li>UI Redesign: Implemented modern GNOME HIG layout with responsive Adw.OverlaySplitView and collapsible sidebar.</li>"
+            "<li>Parch Bluetooth Support: Added detection for parch-bluetooth stack alongside standard BlueZ.</li>"
+            "<li>NetworkManager Detection: Fixed detection for networkmanager package and systemd service status.</li>"
+            "<li>System Prober Improvements: Enhanced hybrid GPU detection (Intel, AMD, NVIDIA) and hardware cache management.</li>"
+            "<li>Security and Safety: Replaced bash commands with atomic file writing and regex validation.</li>"
+            "<li>Mobile Optimization: Added responsive breakpoints and touch-friendly controls.</li>"
+            "</ul>"
+        )
         about = Adw.AboutWindow(
             transient_for=win,
             application_name=_("Parch Driver Manager"),
             application_icon="com.parchlinux.DriverManager",
             version="1.0.1",
-            developer_name="Parch Linux",
-            copyright="\u00a9 2026 Parch Linux",
+            developer_name="Parch GNU/Linux",
+            developers=["Parch Linux Team"],
+            copyright="\u00a9 2026 Parch GNU/Linux",
             license_type=Gtk.License.GPL_3_0,
             website="https://github.com/parchlinux/Parch-Driver-Manager",
             issue_url="https://github.com/parchlinux/Parch-Driver-Manager/issues",
+            translator_credits=_("Parch Linux Team"),
+            comments=_("Hardware driver management tool for Parch GNU/Linux"),
+            release_notes=changelog,
+            release_notes_version="1.0.1",
         )
         about.present()
 
@@ -60,28 +90,19 @@ class ParchDriverManagerApp(Adw.Application):
         win = self.props.active_window
         if not win:
             return
-        dialog = Adw.ShortcutsDialog()
-        dialog.set_title(_("Keyboard Shortcuts"))
-        section = Adw.ShortcutsSection()
-        section.set_title(_("General"))
+        window = Gtk.ShortcutsWindow(transient_for=win, modal=True)
+        section = Gtk.ShortcutsSection(title=_("General"), section_name="general")
+        group = Gtk.ShortcutsGroup(title=_("Application"))
 
-        item = Adw.ShortcutsItem()
-        item.set_title(_("Quit"))
-        item.set_accelerator("<primary>q")
-        section.add(item)
+        item1 = Gtk.ShortcutsShortcut(title=_("Refresh hardware"), accelerator="<primary>r")
+        group.append(item1)
 
-        item = Adw.ShortcutsItem()
-        item.set_title(_("Refresh hardware"))
-        item.set_accelerator("<primary>r")
-        section.add(item)
+        item2 = Gtk.ShortcutsShortcut(title=_("Quit"), accelerator="<primary>q")
+        group.append(item2)
 
-        item = Adw.ShortcutsItem()
-        item.set_title(_("Keyboard shortcuts"))
-        item.set_accelerator("F1")
-        section.add(item)
-
-        dialog.add(section)
-        dialog.present()
+        section.append(group)
+        window.add_section(section)
+        window.present()
 
     def do_activate(self):
         win = self.props.active_window
