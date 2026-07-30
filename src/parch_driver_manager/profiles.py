@@ -30,28 +30,15 @@ class DriverProfile:
 class DriverProfiles:
     @staticmethod
     def get_nvidia_profiles(kernel_flavor: str) -> List[DriverProfile]:
-        dkms = "nvidia-dkms"
+        open_dkms = "nvidia-open-dkms"
         utils = "nvidia-utils"
         settings = "nvidia-settings"
-
-        if kernel_flavor == "lts":
-            kernel_pkg = "linux-lts"
-        elif kernel_flavor == "zen":
-            kernel_pkg = "linux-zen"
-        elif kernel_flavor == "hardened":
-            kernel_pkg = "linux-hardened"
-        else:
-            kernel_flavor = "default"
-            kernel_pkg = "linux"
 
         def post_install_nvidia(runner: BackendRunner):
             logger.debug("Running NVIDIA post-install steps")
             blacklist_path = "/etc/modprobe.d/blacklist-nouveau.conf"
             content = "blacklist nouveau\noptions nouveau modeset=0\n"
-            runner.run(
-                ["bash", "-c", f"echo '{content}' > {shlex.quote(blacklist_path)}"],
-                check=True,
-            )
+            runner.write_file(blacklist_path, content)
             runner.run(["mkinitcpio", "-P"], check=True)
 
         def post_remove_nvidia(runner: BackendRunner):
@@ -62,21 +49,14 @@ class DriverProfiles:
 
         return [
             DriverProfile(
-                name=f"NVIDIA ({kernel_flavor})",
-                description=f"Proprietary NVIDIA driver for {kernel_pkg}",
-                packages=[kernel_pkg, dkms, utils, settings],
+                name="NVIDIA Open Kernel Modules",
+                description="Open-source NVIDIA GPU driver (nvidia-open)",
+                packages=[open_dkms, utils, settings],
                 category="GPU",
                 module="nvidia",
                 post_install=post_install_nvidia,
                 post_remove=post_remove_nvidia,
-            ),
-            DriverProfile(
-                name="NVIDIA Open Source (Nouveau)",
-                description="Open-source Nouveau driver for NVIDIA cards",
-                packages=["mesa", "xf86-video-nouveau"],
-                category="GPU",
-                module="nouveau",
-            ),
+            )
         ]
 
     @staticmethod
@@ -104,15 +84,32 @@ class DriverProfiles:
         ]
 
     @staticmethod
-    def get_gpu_profiles(vendor: str, kernel_flavor: str) -> List[DriverProfile]:
-        vendor = vendor.upper()
-        if vendor == "NVIDIA":
-            return DriverProfiles.get_nvidia_profiles(kernel_flavor)
-        if vendor == "AMD":
-            return DriverProfiles.get_amd_profiles(kernel_flavor)
-        if vendor == "INTEL":
-            return DriverProfiles.get_intel_profiles(kernel_flavor)
-        return []
+    def get_gpu_profiles(vendor: Any, kernel_flavor: str) -> List[DriverProfile]:
+        vendors = []
+        if isinstance(vendor, list):
+            vendors = vendor
+        elif isinstance(vendor, str):
+            vendors = [v.strip() for v in vendor.split(",") if v.strip()]
+
+        profiles: List[DriverProfile] = []
+        seen_names = set()
+
+        for v in vendors:
+            v_upper = v.upper()
+            v_profiles = []
+            if v_upper == "NVIDIA":
+                v_profiles = DriverProfiles.get_nvidia_profiles(kernel_flavor)
+            elif v_upper == "AMD":
+                v_profiles = DriverProfiles.get_amd_profiles(kernel_flavor)
+            elif v_upper == "INTEL":
+                v_profiles = DriverProfiles.get_intel_profiles(kernel_flavor)
+
+            for p in v_profiles:
+                if p.name not in seen_names:
+                    seen_names.add(p.name)
+                    profiles.append(p)
+
+        return profiles
 
     @staticmethod
     def get_network_profiles() -> List[DriverProfile]:
@@ -147,14 +144,42 @@ class DriverProfiles:
 
     @staticmethod
     def get_bluetooth_profiles() -> List[DriverProfile]:
+        def post_install_bluetooth(runner: BackendRunner):
+            logger.debug("Enabling bluetooth.service")
+            runner.run(["systemctl", "enable", "--now", "bluetooth.service"], check=False)
+
+        def post_remove_bluetooth(runner: BackendRunner):
+            logger.debug("Disabling bluetooth.service")
+            runner.run(["systemctl", "disable", "--now", "bluetooth.service"], check=False)
+
         return [
             DriverProfile(
+                name="Parch Bluetooth Stack",
+                description="Parch Linux Bluetooth meta-package with BlueZ and KDE Plasma Bluedevil integration",
+                packages=["parch-bluetooth", "bluez", "bluez-utils", "bluedevil"],
+                category="Bluetooth",
+                module="btusb",
+                post_install=post_install_bluetooth,
+                post_remove=post_remove_bluetooth,
+            ),
+            DriverProfile(
+                name="BlueZ + KDE Bluedevil",
+                description="Standard Bluetooth stack with KDE Plasma Bluedevil panel integration",
+                packages=["bluez", "bluez-utils", "bluedevil"],
+                category="Bluetooth",
+                module="btusb",
+                post_install=post_install_bluetooth,
+                post_remove=post_remove_bluetooth,
+            ),
+            DriverProfile(
                 name="BlueZ + Blueman",
-                description="Bluetooth stack with BlueZ and Blueman GUI",
+                description="Standard Bluetooth stack with GTK Blueman GUI",
                 packages=["bluez", "bluez-utils", "blueman"],
                 category="Bluetooth",
-                module="btusb"
-            )
+                module="btusb",
+                post_install=post_install_bluetooth,
+                post_remove=post_remove_bluetooth,
+            ),
         ]
 
     @staticmethod
