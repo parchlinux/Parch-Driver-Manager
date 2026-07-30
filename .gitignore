@@ -7,3 +7,4 @@ build/
 .gresource
 .mypy_cache/
 .pytest_cache/
+gschemas.compiled
