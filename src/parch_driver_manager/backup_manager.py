@@ -63,7 +63,6 @@ class BackupManager:
     @staticmethod
     def restore_backup(backend: BackendRunner, backup_path: str) -> Tuple[bool, str]:
         try:
-            # 1. خواندن لیست پکیج‌ها
             pkglist_path = os.path.join(backup_path, "pkglist.txt")
             if not os.path.exists(pkglist_path):
                 return False, "pkglist.txt Not Found."
