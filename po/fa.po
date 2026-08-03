@@ -241,3 +241,48 @@ msgstr "وضعیت:"
 
 msgid "No device found"
 msgstr "دستگاهی یافت نشد"
+
+msgid "Backup"
+msgstr "بک‌آپ"
+
+msgid "Backup Operations"
+msgstr "عملیات بک‌آپ"
+
+msgid "Create and restore driver backups"
+msgstr "ایجاد و بازیابی بک‌آپ درایورها"
+
+msgid "Create Backup"
+msgstr "گرفتن بک‌آپ"
+
+msgid "Restore Backup"
+msgstr "بازیابی بک‌آپ"
+
+msgid "Delete Backup"
+msgstr "حذف بک‌آپ"
+
+msgid "Existing Backups"
+msgstr "بک‌آپ‌های موجود"
+
+msgid "List of available driver backups"
+msgstr "لیست بک‌آپ‌های درایور موجود"
+
+msgid "No backups found"
+msgstr "هیچ بک‌آپی یافت نشد"
+
+msgid "Create your first backup using the button above"
+msgstr "اولین بک‌آپ خود را با دکمه‌ی بالا ایجاد کنید"
+
+msgid "Please select a backup first"
+msgstr "لطفاً ابتدا یک بک‌آپ را انتخاب کنید"
+
+msgid "Restore Backup?"
+msgstr "بازیابی بک‌آپ؟"
+
+msgid "This will install drivers from"
+msgstr "این عمل درایورها را از"
+
+msgid "will be permanently deleted"
+msgstr "به‌طور دائم حذف خواهد شد"
+
+msgid "Create Backup"
+msgstr "گرفتن بک‌آپ"
