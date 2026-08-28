@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 pkgname=pdm
-pkgver=1.0.1
-pkgrel=2
+pkgver=1.1.0
+pkgrel=1
 pkgdesc="A modern driver management tool for Arch-based distributions"
 arch=('any')
 url="https://github.com/parchlinux/Parch-Driver-Manager"

@@ -5,9 +5,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Parch Driver Manager 1.0.1\n"
-"Report-Msgid-Bugs-To: https://github.com/parchlinux/Parch-Driver-Manager/issues\n"
-"POT-Creation-Date: 2026-06-09 00:00+0000\n"
+"Project-Id-Version: Parch Driver Manager 1.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-28 20:48+0330\n"
 "PO-Revision-Date: 2026-06-09 00:00+0000\n"
 "Last-Translator: Parch Linux Team\n"
 "Language-Team: Persian\n"
@@ -17,272 +17,537 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
+#: src/parch_driver_manager/ui/app.py:70
+#: src/parch_driver_manager/ui/window.py:30
+#: src/parch_driver_manager/ui/window.py:138
+#: src/parch_driver_manager/ui/window.py:896
 msgid "Parch Driver Manager"
 msgstr "مدیریت درایورهای پارچ"
 
-msgid "Hardware & Drivers"
-msgstr "سخت‌افزار و درایورها"
+#: src/parch_driver_manager/ui/app.py:79
+msgid "Parch Linux Team"
+msgstr ""
 
-msgid "GPU"
-msgstr "کارت گرافیک"
+#: src/parch_driver_manager/ui/app.py:80
+msgid "Hardware driver management tool for Parch GNU/Linux"
+msgstr ""
 
-msgid "Network"
-msgstr "شبکه"
-
-msgid "Audio"
-msgstr "صدا"
-
-msgid "Bluetooth"
-msgstr "بلوتوث"
-
-msgid "System Info"
-msgstr "اطلاعات سیستم"
-
-msgid "Logs"
-msgstr "گزارشات"
-
-msgid "Select a Category"
-msgstr "یک دسته انتخاب کنید"
-
-msgid "Detected Hardware"
-msgstr "سخت‌افزار شناسایی‌شده"
-
-msgid "Available Drivers"
-msgstr "درایورهای موجود"
-
-msgid "Driver"
-msgstr "درایور"
-
-msgid "None"
-msgstr "ندارد"
-
-msgid "Install"
-msgstr "نصب"
-
-msgid "Remove"
-msgstr "حذف"
-
-msgid "Enable"
-msgstr "فعال"
-
-msgid "Disable"
-msgstr "غیرفعال"
-
+#: src/parch_driver_manager/ui/app.py:94
 msgid "General"
 msgstr "عمومی"
 
-msgid "Quit"
-msgstr "خروج"
+#: src/parch_driver_manager/ui/app.py:95
+msgid "Application"
+msgstr ""
 
+#: src/parch_driver_manager/ui/app.py:97
 msgid "Refresh hardware"
 msgstr "تازه‌سازی سخت‌افزار"
 
-msgid "Keyboard shortcuts"
-msgstr "میانبرهای صفحه‌کلید"
+#: src/parch_driver_manager/ui/app.py:100
+#: src/parch_driver_manager/ui/window.py:164
+msgid "Quit"
+msgstr "خروج"
 
-msgid "Keyboard Shortcuts"
-msgstr "میانبرهای صفحه‌کلید"
+#: src/parch_driver_manager/ui/window.py:101
+#, fuzzy
+msgid "Parch Drivers"
+msgstr "مدیریت درایورهای پارچ"
 
-msgid "Refresh hardware detection"
-msgstr "تازه‌سازی شناسایی سخت‌افزار"
-
-msgid "No GPU detected"
-msgstr "کارت گرافیک یافت نشد"
-
-msgid "No Network devices detected"
-msgstr "دستگاه شبکه‌ای یافت نشد"
-
-msgid "No Audio devices detected"
-msgstr "دستگاه صوتی یافت نشد"
-
-msgid "No Bluetooth devices detected"
-msgstr "دستگاه بلوتوث یافت نشد"
-
-msgid "Hardware"
-msgstr "سخت‌افزار"
-
-msgid "Processor"
-msgstr "پردازنده"
-
-msgid "Memory"
-msgstr "حافظه"
-
-msgid "Device"
-msgstr "دستگاه"
-
-msgid "Operating System"
-msgstr "سیستم‌عامل"
-
-msgid "Kernel"
-msgstr "کرنل"
-
-msgid "Hostname"
-msgstr "نام میزبان"
-
-msgid "Display Server"
-msgstr "سرور نمایش"
-
-msgid "System"
-msgstr "سیستم"
-
-msgid "Features"
-msgstr "ویژگی‌ها"
-
-msgid "Hybrid Graphics"
-msgstr "گرافیک ترکیبی"
-
-msgid "Secure Boot"
-msgstr "بوت امن"
-
-msgid "Enabled"
-msgstr "فعال"
-
-msgid "Disabled"
-msgstr "غیرفعال"
-
-msgid "Operation log"
-msgstr "گزارش عملیات"
-
-msgid "Clear"
-msgstr "پاک کردن"
-
-msgid "Cancel"
-msgstr "لغو"
-
-msgid "Confirm"
-msgstr "تایید"
-
-msgid "Are you sure?"
-msgstr "آیا مطمئن هستید؟"
-
-msgid "This action will install the driver packages."
-msgstr "این عمل پکیج‌های درایور را نصب می‌کند."
-
-msgid "This action will remove the driver packages."
-msgstr "این عمل پکیج‌های درایور را حذف می‌کند."
-
-msgid "This action will disable the hardware module."
-msgstr "این عمل ماژول سخت‌افزاری را غیرفعال می‌کند."
-
-msgid "No profile selected."
-msgstr "پروفایلی انتخاب نشده است."
-
-msgid "Profile installed successfully."
-msgstr "پروفایل با موفقیت نصب شد."
-
-msgid "Profile removed successfully."
-msgstr "پروفایل با موفقیت حذف شد."
-
-msgid "Hardware disabled. Reboot might be required."
-msgstr "سخت‌افزار غیرفعال شد. ممکن است ریبوت نیاز باشد."
-
-msgid "Hardware enabled."
-msgstr "سخت‌افزار فعال شد."
-
-msgid "This profile has no associated kernel module to disable."
-msgstr "این پروفایل ماژول کرنل ندارد."
-
-msgid "This profile has no associated kernel module to enable."
-msgstr "این پروفایل ماژول کرنل ندارد."
-
-msgid "OK"
-msgstr "باشه"
-
-msgid "Starting installation"
-msgstr "شروع نصب"
-
-msgid "Profile installation finished."
-msgstr "نصب پروفایل به پایان رسید."
-
-msgid "Starting removal"
-msgstr "شروع حذف"
-
-msgid "Profile removal finished."
-msgstr "حذف پروفایل به پایان رسید."
-
-msgid "Disabling hardware module"
-msgstr "غیرفعال کردن ماژول سخت‌افزاری"
-
-msgid "Enabling hardware module"
-msgstr "فعال کردن ماژول سخت‌افزاری"
-
-msgid "Operation failed. See log for details."
-msgstr "عملیات ناموفق بود. گزارشات را ببینید."
-
-msgid "Unexpected error. See log for details."
-msgstr "خطای غیرمنتظره. گزارشات را ببینید."
-
-msgid "About"
-msgstr "درباره"
-
+#: src/parch_driver_manager/ui/window.py:101
 msgid "Categories"
 msgstr "دسته‌ها"
 
-msgid "Content"
-msgstr "محتوا"
+#: src/parch_driver_manager/ui/window.py:107
+msgid "Refresh hardware detection"
+msgstr "تازه‌سازی شناسایی سخت‌افزار"
 
-msgid "Unknown"
-msgstr "نامشخص"
+#: src/parch_driver_manager/ui/window.py:138
+msgid "Select a Category"
+msgstr "یک دسته انتخاب کنید"
 
-msgid "No Bluetooth service running"
+#: src/parch_driver_manager/ui/window.py:144
+msgid "Toggle Sidebar"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:151
+msgid "Menu"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:156
+msgid "Keyboard Shortcuts"
+msgstr "میانبرهای صفحه‌کلید"
+
+#: src/parch_driver_manager/ui/window.py:160
+msgid "About"
+msgstr "درباره"
+
+#: src/parch_driver_manager/ui/window.py:209
+msgid "Active"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:209
+#: src/parch_driver_manager/ui/window.py:658
+#: src/parch_driver_manager/ui/window.py:663
+msgid "Disabled"
+msgstr "غیرفعال"
+
+#: src/parch_driver_manager/ui/window.py:212
+#: src/parch_driver_manager/ui/window.py:225
+#: src/parch_driver_manager/ui/window.py:431
+#: src/parch_driver_manager/ui/window.py:618
+#: src/parch_driver_manager/ui/window.py:888
+msgid "GPU"
+msgstr "کارت گرافیک"
+
+#: src/parch_driver_manager/ui/window.py:212
+#: src/parch_driver_manager/ui/window.py:888
+#, fuzzy
+msgid "Graphics Drivers"
+msgstr "درایورهای موجود"
+
+#: src/parch_driver_manager/ui/window.py:213
+#: src/parch_driver_manager/ui/window.py:225
+#: src/parch_driver_manager/ui/window.py:482
+#: src/parch_driver_manager/ui/window.py:889
+msgid "Network"
+msgstr "شبکه"
+
+#: src/parch_driver_manager/ui/window.py:213
+#: src/parch_driver_manager/ui/window.py:889
+msgid "Network Interfaces"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:214
+#: src/parch_driver_manager/ui/window.py:225
+#: src/parch_driver_manager/ui/window.py:533
+#: src/parch_driver_manager/ui/window.py:890
+msgid "Audio"
+msgstr "صدا"
+
+#: src/parch_driver_manager/ui/window.py:214
+#: src/parch_driver_manager/ui/window.py:890
+#, fuzzy
+msgid "Audio Stack"
+msgstr "صدا"
+
+#: src/parch_driver_manager/ui/window.py:215
+#: src/parch_driver_manager/ui/window.py:225
+#: src/parch_driver_manager/ui/window.py:592
+#: src/parch_driver_manager/ui/window.py:891
+msgid "Bluetooth"
+msgstr "بلوتوث"
+
+#: src/parch_driver_manager/ui/window.py:215
+#: src/parch_driver_manager/ui/window.py:891
+#, fuzzy
+msgid "Bluetooth Services"
 msgstr "سرویس بلوتوث فعال نیست"
 
-msgid "Bluetooth is soft-blocked"
-msgstr "بلوتوث به‌صورت نرم‌افزاری مسدود شده"
+#: src/parch_driver_manager/ui/window.py:216
+#: src/parch_driver_manager/ui/window.py:667
+#: src/parch_driver_manager/ui/window.py:892
+msgid "System Info"
+msgstr "اطلاعات سیستم"
 
-msgid "Bluetooth is hard-blocked"
-msgstr "بلوتوث به‌صورت سخت‌افزاری مسدود شده"
+#: src/parch_driver_manager/ui/window.py:216
+#: src/parch_driver_manager/ui/window.py:892
+#, fuzzy
+msgid "Hardware and OS Details"
+msgstr "سخت‌افزار و درایورها"
 
-msgid "Service:"
-msgstr "سرویس:"
-
-msgid "Status:"
-msgstr "وضعیت:"
-
-msgid "No device found"
-msgstr "دستگاهی یافت نشد"
-
+#: src/parch_driver_manager/ui/window.py:217
+#: src/parch_driver_manager/ui/window.py:729
+#: src/parch_driver_manager/ui/window.py:893
 msgid "Backup"
 msgstr "بک‌آپ"
 
+#: src/parch_driver_manager/ui/window.py:217
+#, fuzzy
+msgid "Driver backups"
+msgstr "درایور"
+
+#: src/parch_driver_manager/ui/window.py:217
+#: src/parch_driver_manager/ui/window.py:893
+#, fuzzy
+msgid "Manage driver backups"
+msgstr "لیست بک‌آپ‌های درایور موجود"
+
+#: src/parch_driver_manager/ui/window.py:218
+#: src/parch_driver_manager/ui/window.py:882
+#: src/parch_driver_manager/ui/window.py:894
+msgid "Logs"
+msgstr "گزارشات"
+
+#: src/parch_driver_manager/ui/window.py:218
+#, fuzzy
+msgid "Operation logs"
+msgstr "گزارش عملیات"
+
+#: src/parch_driver_manager/ui/window.py:218
+#: src/parch_driver_manager/ui/window.py:894
+msgid "Activity and Event Logs"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:305
+#, fuzzy
+msgid "No profiles available"
+msgstr "پروفایلی انتخاب نشده است."
+
+#: src/parch_driver_manager/ui/window.py:306
+msgid "No driver profiles were found for this category."
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:311
+msgid "Available Drivers"
+msgstr "درایورهای موجود"
+
+#: src/parch_driver_manager/ui/window.py:311
+msgid "Manage driver packages for this hardware category"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:347
+#, fuzzy
+msgid "Installed"
+msgstr "نصب"
+
+#: src/parch_driver_manager/ui/window.py:356
+msgid "Enable"
+msgstr "فعال"
+
+#: src/parch_driver_manager/ui/window.py:361
+msgid "Disable"
+msgstr "غیرفعال"
+
+#: src/parch_driver_manager/ui/window.py:366
+msgid "Remove"
+msgstr "حذف"
+
+#: src/parch_driver_manager/ui/window.py:374
+msgid "Install"
+msgstr "نصب"
+
+#: src/parch_driver_manager/ui/window.py:397
+#: src/parch_driver_manager/ui/window.py:450
+#: src/parch_driver_manager/ui/window.py:501
+#: src/parch_driver_manager/ui/window.py:552
+msgid "Detected Hardware"
+msgstr "سخت‌افزار شناسایی‌شده"
+
+#: src/parch_driver_manager/ui/window.py:397
+msgid "Graphics adapters detected by system prober"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:407
+#: src/parch_driver_manager/ui/window.py:460
+#: src/parch_driver_manager/ui/window.py:511
+msgid "None"
+msgstr "ندارد"
+
+#: src/parch_driver_manager/ui/window.py:408
+#: src/parch_driver_manager/ui/window.py:461
+#: src/parch_driver_manager/ui/window.py:512
+#: src/parch_driver_manager/ui/window.py:563
+#, fuzzy
+msgid "Driver in use"
+msgstr "درایور"
+
+#: src/parch_driver_manager/ui/window.py:423
+msgid "No GPU detected"
+msgstr "کارت گرافیک یافت نشد"
+
+#: src/parch_driver_manager/ui/window.py:450
+msgid "Network interfaces detected by system prober"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:476
+msgid "No Network devices detected"
+msgstr "دستگاه شبکه‌ای یافت نشد"
+
+#: src/parch_driver_manager/ui/window.py:501
+#, fuzzy
+msgid "Audio cards and controllers detected"
+msgstr "دستگاه صوتی یافت نشد"
+
+#: src/parch_driver_manager/ui/window.py:527
+msgid "No Audio devices detected"
+msgstr "دستگاه صوتی یافت نشد"
+
+#: src/parch_driver_manager/ui/window.py:552
+msgid "Bluetooth controllers and USB adapters"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:562
+msgid "btusb"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:566
+msgid "No Bluetooth service running"
+msgstr "سرویس بلوتوث فعال نیست"
+
+#: src/parch_driver_manager/ui/window.py:568
+msgid "Bluetooth is soft-blocked"
+msgstr "بلوتوث به‌صورت نرم‌افزاری مسدود شده"
+
+#: src/parch_driver_manager/ui/window.py:570
+msgid "Bluetooth is hard-blocked"
+msgstr "بلوتوث به‌صورت سخت‌افزاری مسدود شده"
+
+#: src/parch_driver_manager/ui/window.py:586
+msgid "No Bluetooth devices detected"
+msgstr "دستگاه بلوتوث یافت نشد"
+
+#: src/parch_driver_manager/ui/window.py:611
+msgid "Hardware Configuration"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:614
+msgid "Processor"
+msgstr "پردازنده"
+
+#: src/parch_driver_manager/ui/window.py:625
+msgid "Memory"
+msgstr "حافظه"
+
+#: src/parch_driver_manager/ui/window.py:629
+#, fuzzy
+msgid "System Environment"
+msgstr "اطلاعات سیستم"
+
+#: src/parch_driver_manager/ui/window.py:633
+msgid "Device"
+msgstr "دستگاه"
+
+#: src/parch_driver_manager/ui/window.py:638
+msgid "Operating System"
+msgstr "سیستم‌عامل"
+
+#: src/parch_driver_manager/ui/window.py:642
+msgid "Kernel"
+msgstr "کرنل"
+
+#: src/parch_driver_manager/ui/window.py:646
+msgid "Hostname"
+msgstr "نام میزبان"
+
+#: src/parch_driver_manager/ui/window.py:650
+msgid "Display Server"
+msgstr "سرور نمایش"
+
+#: src/parch_driver_manager/ui/window.py:654
+#, fuzzy
+msgid "Platform Features"
+msgstr "ویژگی‌ها"
+
+#: src/parch_driver_manager/ui/window.py:657
+msgid "Hybrid Graphics"
+msgstr "گرافیک ترکیبی"
+
+#: src/parch_driver_manager/ui/window.py:658
+#: src/parch_driver_manager/ui/window.py:663
+msgid "Enabled"
+msgstr "فعال"
+
+#: src/parch_driver_manager/ui/window.py:662
+msgid "Secure Boot"
+msgstr "بوت امن"
+
+#: src/parch_driver_manager/ui/window.py:688
 msgid "Backup Operations"
 msgstr "عملیات بک‌آپ"
 
+#: src/parch_driver_manager/ui/window.py:689
 msgid "Create and restore driver backups"
 msgstr "ایجاد و بازیابی بک‌آپ درایورها"
 
+#: src/parch_driver_manager/ui/window.py:702
 msgid "Create Backup"
 msgstr "گرفتن بک‌آپ"
 
+#: src/parch_driver_manager/ui/window.py:707
 msgid "Restore Backup"
 msgstr "بازیابی بک‌آپ"
 
+#: src/parch_driver_manager/ui/window.py:711
 msgid "Delete Backup"
 msgstr "حذف بک‌آپ"
 
+#: src/parch_driver_manager/ui/window.py:717
 msgid "Existing Backups"
 msgstr "بک‌آپ‌های موجود"
 
+#: src/parch_driver_manager/ui/window.py:718
 msgid "List of available driver backups"
 msgstr "لیست بک‌آپ‌های درایور موجود"
 
+#: src/parch_driver_manager/ui/window.py:742
 msgid "No backups found"
 msgstr "هیچ بک‌آپی یافت نشد"
 
+#: src/parch_driver_manager/ui/window.py:743
 msgid "Create your first backup using the button above"
 msgstr "اولین بک‌آپ خود را با دکمه‌ی بالا ایجاد کنید"
 
+#: src/parch_driver_manager/ui/window.py:776
+#: src/parch_driver_manager/ui/window.py:806
 msgid "Please select a backup first"
 msgstr "لطفاً ابتدا یک بک‌آپ را انتخاب کنید"
 
+#: src/parch_driver_manager/ui/window.py:783
 msgid "Restore Backup?"
 msgstr "بازیابی بک‌آپ؟"
 
+#: src/parch_driver_manager/ui/window.py:784
 msgid "This will install drivers from"
 msgstr "این عمل درایورها را از"
 
-msgid "will be permanently deleted"
+#: src/parch_driver_manager/ui/window.py:813
+#, fuzzy
+msgid "Delete Backup?"
+msgstr "حذف بک‌آپ"
+
+#: src/parch_driver_manager/ui/window.py:814
+msgid "This will permanently delete"
 msgstr "به‌طور دائم حذف خواهد شد"
 
-msgid "Create Backup"
-msgstr "گرفتن بک‌آپ"
+#: src/parch_driver_manager/ui/window.py:852
+#, fuzzy
+msgid "Operation Log"
+msgstr "گزارش عملیات"
+
+#: src/parch_driver_manager/ui/window.py:858
+#, fuzzy
+msgid "Clear Logs"
+msgstr "پاک کردن"
+
+#: src/parch_driver_manager/ui/window.py:910
+msgid "An operation is already in progress."
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:919
+#, fuzzy
+msgid "Operation failed"
+msgstr "گزارش عملیات"
+
+#: src/parch_driver_manager/ui/window.py:925
+msgid "Unexpected error"
+msgstr ""
+
+#: src/parch_driver_manager/ui/window.py:988
+#, fuzzy
+msgid "Hardware detection refreshed."
+msgstr "تازه‌سازی شناسایی سخت‌افزار"
+
+#: src/parch_driver_manager/ui/window.py:1000
+msgid "Cancel"
+msgstr "لغو"
+
+#: src/parch_driver_manager/ui/window.py:1001
+msgid "Confirm"
+msgstr "تایید"
+
+#: src/parch_driver_manager/ui/window.py:1012
+#: src/parch_driver_manager/ui/window.py:1032
+#: src/parch_driver_manager/ui/window.py:1053
+#: src/parch_driver_manager/ui/window.py:1073
+msgid "Are you sure?"
+msgstr "آیا مطمئن هستید؟"
+
+#: src/parch_driver_manager/ui/window.py:1013
+#, fuzzy
+msgid "This action will install driver packages for"
+msgstr "این عمل پکیج‌های درایور را نصب می‌کند."
+
+#: src/parch_driver_manager/ui/window.py:1020
+msgid "Starting installation"
+msgstr "شروع نصب"
+
+#: src/parch_driver_manager/ui/window.py:1022
+msgid "Profile installation finished."
+msgstr "نصب پروفایل به پایان رسید."
+
+#: src/parch_driver_manager/ui/window.py:1026
+msgid "Profile installed successfully."
+msgstr "پروفایل با موفقیت نصب شد."
+
+#: src/parch_driver_manager/ui/window.py:1033
+#, fuzzy
+msgid "This action will remove driver packages for"
+msgstr "این عمل پکیج‌های درایور را حذف می‌کند."
+
+#: src/parch_driver_manager/ui/window.py:1041
+msgid "Starting removal"
+msgstr "شروع حذف"
+
+#: src/parch_driver_manager/ui/window.py:1043
+msgid "Profile removal finished."
+msgstr "حذف پروفایل به پایان رسید."
+
+#: src/parch_driver_manager/ui/window.py:1047
+msgid "Profile removed successfully."
+msgstr "پروفایل با موفقیت حذف شد."
+
+#: src/parch_driver_manager/ui/window.py:1054
+#, fuzzy
+msgid "This action will disable module"
+msgstr "این عمل ماژول سخت‌افزاری را غیرفعال می‌کند."
+
+#: src/parch_driver_manager/ui/window.py:1062
+msgid "Disabling hardware module"
+msgstr "غیرفعال کردن ماژول سخت‌افزاری"
+
+#: src/parch_driver_manager/ui/window.py:1067
+msgid "Hardware disabled. Reboot might be required."
+msgstr "سخت‌افزار غیرفعال شد. ممکن است ریبوت نیاز باشد."
+
+#: src/parch_driver_manager/ui/window.py:1074
+#, fuzzy
+msgid "This action will enable module"
+msgstr "این عمل ماژول سخت‌افزاری را غیرفعال می‌کند."
+
+#: src/parch_driver_manager/ui/window.py:1081
+msgid "Enabling hardware module"
+msgstr "فعال کردن ماژول سخت‌افزاری"
+
+#: src/parch_driver_manager/ui/window.py:1086
+msgid "Hardware enabled."
+msgstr "سخت‌افزار فعال شد."
+
+#~ msgid "Keyboard shortcuts"
+#~ msgstr "میانبرهای صفحه‌کلید"
+
+#~ msgid "Hardware"
+#~ msgstr "سخت‌افزار"
+
+#~ msgid "System"
+#~ msgstr "سیستم"
+
+#~ msgid "This profile has no associated kernel module to disable."
+#~ msgstr "این پروفایل ماژول کرنل ندارد."
+
+#~ msgid "This profile has no associated kernel module to enable."
+#~ msgstr "این پروفایل ماژول کرنل ندارد."
+
+#~ msgid "OK"
+#~ msgstr "باشه"
+
+#~ msgid "Operation failed. See log for details."
+#~ msgstr "عملیات ناموفق بود. گزارشات را ببینید."
+
+#~ msgid "Unexpected error. See log for details."
+#~ msgstr "خطای غیرمنتظره. گزارشات را ببینید."
+
+#~ msgid "Content"
+#~ msgstr "محتوا"
+
+#~ msgid "Unknown"
+#~ msgstr "نامشخص"
+
+#~ msgid "Service:"
+#~ msgstr "سرویس:"
+
+#~ msgid "Status:"
+#~ msgstr "وضعیت:"
+
+#~ msgid "No device found"
+#~ msgstr "دستگاهی یافت نشد"

@@ -9,7 +9,13 @@ RTL_LANGUAGES = {"fa", "ar", "he", "ur"}
 
 
 def _get_locale_dir() -> str:
-    return os.path.join(os.path.dirname(__file__), "locale")
+    pkg_locale = os.path.join(os.path.dirname(os.path.dirname(__file__)), "locale")
+    if os.path.isdir(pkg_locale):
+        return pkg_locale
+    sys_locale = "/usr/share/locale"
+    if os.path.isdir(sys_locale):
+        return sys_locale
+    return pkg_locale
 
 
 def get_language() -> str:

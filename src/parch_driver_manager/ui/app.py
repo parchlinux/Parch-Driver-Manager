@@ -54,22 +54,22 @@ class ParchDriverManagerApp(Adw.Application):
         if not win:
             return
         changelog = (
-            "<p>Changes in version 1.0.1:</p>"
+            "<p>Changes in version 1.1.0:</p>"
             "<ul>"
+            "<li>Driver Backup & Restore: Create, list, restore, and delete system hardware driver backups.</li>"
+            "<li>Localization Fixes: Fixed locale directory resolution for RTL and Persian translations.</li>"
             "<li>NVIDIA Driver Upgrade: Set nvidia-open (open-source kernel modules) as the primary NVIDIA driver.</li>"
             "<li>UI Redesign: Implemented modern GNOME HIG layout with responsive Adw.OverlaySplitView and collapsible sidebar.</li>"
             "<li>Parch Bluetooth Support: Added detection for parch-bluetooth stack alongside standard BlueZ.</li>"
             "<li>NetworkManager Detection: Fixed detection for networkmanager package and systemd service status.</li>"
-            "<li>System Prober Improvements: Enhanced hybrid GPU detection (Intel, AMD, NVIDIA) and hardware cache management.</li>"
-            "<li>Security and Safety: Replaced bash commands with atomic file writing and regex validation.</li>"
-            "<li>Mobile Optimization: Added responsive breakpoints and touch-friendly controls.</li>"
+            "<li>System Prober Improvements: Enhanced hybrid GPU detection and hardware cache management.</li>"
             "</ul>"
         )
         about = Adw.AboutWindow(
             transient_for=win,
             application_name=_("Parch Driver Manager"),
             application_icon="com.parchlinux.DriverManager",
-            version="1.0.1",
+            version="1.1.0",
             developer_name="Parch GNU/Linux",
             developers=["Parch Linux Team"],
             copyright="\u00a9 2026 Parch GNU/Linux",
@@ -79,7 +79,7 @@ class ParchDriverManagerApp(Adw.Application):
             translator_credits=_("Parch Linux Team"),
             comments=_("Hardware driver management tool for Parch GNU/Linux"),
             release_notes=changelog,
-            release_notes_version="1.0.1",
+            release_notes_version="1.1.0",
         )
         about.present()
 
