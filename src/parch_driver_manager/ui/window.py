@@ -14,6 +14,7 @@ from ..system_prober import SystemProber, CommandError
 from ..backend import BackendRunner
 from ..manager import DriverManager
 from ..profiles import DriverProfiles, DriverProfile
+from ..backup_manager import BackupManager
 
 from .settings import _, is_rtl
 from .widgets import LogBuffer
@@ -81,7 +82,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.toast_overlay = Adw.ToastOverlay()
         self.set_content(self.toast_overlay)
 
-        # Overlay Split View (standard GNOME collapsible sidebar)
         self.split_view = Adw.OverlaySplitView()
         self.split_view.set_min_sidebar_width(240)
         self.split_view.set_max_sidebar_width(300)
@@ -89,12 +89,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.split_view.set_show_sidebar(True)
         self.toast_overlay.set_child(self.split_view)
 
-        # Responsive Mobile Breakpoint
         bp_mobile = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 720px"))
         bp_mobile.add_setter(self.split_view, "collapsed", True)
         self.add_breakpoint(bp_mobile)
 
-        # Sidebar Panel
         sidebar_toolbar = Adw.ToolbarView()
         self.split_view.set_sidebar(sidebar_toolbar)
 
@@ -132,7 +130,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         self._populate_sidebar()
 
-        # Content Panel
         content_toolbar = Adw.ToolbarView()
         self.split_view.set_content(content_toolbar)
 
@@ -217,6 +214,7 @@ class MainWindow(Adw.ApplicationWindow):
             (_("Audio"), "audio-card-symbolic", "PipeWire / ALSA", _("Audio Stack")),
             (_("Bluetooth"), "preferences-system-bluetooth-symbolic", bt_sub, _("Bluetooth Services")),
             (_("System Info"), "preferences-system-symbolic", self.system_info.get("os", "Parch GNU/Linux"), _("Hardware and OS Details")),
+            (_("Backup"), "drive-harddisk-symbolic", _("Driver backups"), _("Manage driver backups")),
             (_("Logs"), "text-x-generic-symbolic", _("Operation logs"), _("Activity and Event Logs"))
         ]
 
@@ -224,7 +222,6 @@ class MainWindow(Adw.ApplicationWindow):
             row = Adw.ActionRow(title=cat, subtitle=sub)
             row.set_icon_name(icon)
             
-            # Active indicator badge
             if cat in (_("GPU"), _("Network"), _("Audio"), _("Bluetooth")):
                 active_icon = Gtk.Image.new_from_icon_name("emblem-ok-symbolic")
                 active_icon.add_css_class("success-icon")
@@ -245,6 +242,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._build_audio_page()
         self._build_bluetooth_page()
         self._build_info_page()
+        self._build_backup_page()
         self._build_logs_page()
 
     def _is_profile_installed(self, profile: DriverProfile) -> bool:
@@ -668,6 +666,170 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.stack.add_named(scrolled, _("System Info"))
 
+
+    def _build_backup_page(self):
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_vexpand(True)
+
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(840)
+        clamp.set_margin_top(16)
+        clamp.set_margin_bottom(16)
+        clamp.set_margin_start(12)
+        clamp.set_margin_end(12)
+        scrolled.set_child(clamp)
+
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        main_box.set_vexpand(False)
+        clamp.set_child(main_box)
+
+        actions_group = Adw.PreferencesGroup(
+            title=_("Backup Operations"),
+            description=_("Create and restore driver backups")
+        )
+        main_box.append(actions_group)
+
+        actions_grid = Gtk.Grid()
+        actions_grid.set_column_spacing(12)
+        actions_grid.set_row_spacing(12)
+        actions_grid.set_margin_top(12)
+        actions_grid.set_margin_bottom(12)
+        actions_grid.set_margin_start(12)
+        actions_grid.set_margin_end(12)
+        actions_group.add(actions_grid)
+
+        backup_btn = Gtk.Button(label=_("Create Backup"))
+        backup_btn.add_css_class("suggested-action")
+        backup_btn.connect("clicked", self._on_create_backup)
+        actions_grid.attach(backup_btn, 0, 0, 1, 1)
+
+        restore_btn = Gtk.Button(label=_("Restore Backup"))
+        restore_btn.connect("clicked", self._on_restore_backup)
+        actions_grid.attach(restore_btn, 1, 0, 1, 1)
+
+        delete_btn = Gtk.Button(label=_("Delete Backup"))
+        delete_btn.add_css_class("destructive-action")
+        delete_btn.connect("clicked", self._on_delete_backup)
+        actions_grid.attach(delete_btn, 2, 0, 1, 1)
+
+        list_group = Adw.PreferencesGroup(
+            title=_("Existing Backups"),
+            description=_("List of available driver backups")
+        )
+        main_box.append(list_group)
+
+        self.backup_listbox = Gtk.ListBox()
+        self.backup_listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.backup_listbox.add_css_class("boxed-list")
+        list_group.add(self.backup_listbox)
+
+        self._refresh_backup_list()
+
+        self.stack.add_named(scrolled, _("Backup"))
+
+    def _refresh_backup_list(self):
+        child = self.backup_listbox.get_first_child()
+        while child is not None:
+            next_child = child.get_next_sibling()
+            self.backup_listbox.remove(child)
+            child = next_child
+
+        backups = BackupManager.list_backups()
+
+        if not backups:
+            row = Adw.ActionRow(
+                title=_("No backups found"),
+                subtitle=_("Create your first backup using the button above")
+            )
+            self.backup_listbox.append(row)
+            return
+
+        for backup in backups:
+            row = Adw.ActionRow(
+                title=backup["name"],
+                subtitle=f"{backup['driver_count']} drivers • {backup['size']} • {backup['date']}"
+            )
+            row.set_activatable(True)
+            self.backup_listbox.append(row)
+
+
+    def _on_create_backup(self, _button):
+        def task():
+            GLib.idle_add(self._start_operation)
+            self.log_buffer.append("➔ Creating backup...")
+            success, result = BackupManager.create_backup(self.backend)
+            if success:
+                GLib.idle_add(self._refresh_backup_list)
+                GLib.idle_add(self._show_toast, f"✅ Backup created: {os.path.basename(result)}")
+                self.log_buffer.append(f"✅ Backup created: {result}")
+            else:
+                GLib.idle_add(self._show_toast, f"❌ Backup failed: {result}")
+                self.log_buffer.append(f"❌ Backup failed: {result}")
+            GLib.idle_add(self._end_operation)
+
+        self._run_in_thread(task)
+
+    def _on_restore_backup(self, _button):
+        selected = self.backup_listbox.get_selected_row()
+        if not selected:
+            self._show_toast(_("Please select a backup first"))
+            return
+
+        backup_name = selected.get_title()
+        backup_path = os.path.join(BackupManager.BACKUP_DIR, backup_name)
+
+        self._show_confirm_dialog(
+            _("Restore Backup?"),
+            f"{_('This will install drivers from')} {backup_name}",
+            lambda: self._do_restore(backup_path)
+        )
+
+    def _do_restore(self, backup_path: str):
+        def task():
+            GLib.idle_add(self._start_operation)
+            self.log_buffer.append(f"➔ Restoring from: {backup_path}")
+            success, result = BackupManager.restore_backup(self.backend, backup_path)
+            if success:
+                GLib.idle_add(self._show_toast, f"✅ Restore completed: {result}")
+                self.log_buffer.append(f"✅ Restore completed: {result}")
+            else:
+                GLib.idle_add(self._show_toast, f"❌ Restore failed: {result}")
+                self.log_buffer.append(f"❌ Restore failed: {result}")
+            GLib.idle_add(self._end_operation)
+
+        self._run_in_thread(task)
+
+    def _on_delete_backup(self, _button):
+        selected = self.backup_listbox.get_selected_row()
+        if not selected:
+            self._show_toast(_("Please select a backup first"))
+            return
+
+        backup_name = selected.get_title()
+        backup_path = os.path.join(BackupManager.BACKUP_DIR, backup_name)
+
+        self._show_confirm_dialog(
+            _("Delete Backup?"),
+            f"{_('This will permanently delete')} {backup_name}",
+            lambda: self._do_delete(backup_path),
+            destructive=True
+        )
+
+    def _do_delete(self, backup_path: str):
+        def task():
+            GLib.idle_add(self._start_operation)
+            success, result = BackupManager.delete_backup(backup_path)
+            if success:
+                GLib.idle_add(self._refresh_backup_list)
+                self._show_toast("✅ Backup deleted")
+            else:
+                self._show_toast(f"❌ Delete failed: {result}")
+            GLib.idle_add(self._end_operation)
+
+        self._run_in_thread(task)
+
+
     def _build_logs_page(self):
         scrolled_outer = Gtk.ScrolledWindow()
         scrolled_outer.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -728,6 +890,7 @@ class MainWindow(Adw.ApplicationWindow):
                 _("Audio"): _("Audio Stack"),
                 _("Bluetooth"): _("Bluetooth Services"),
                 _("System Info"): _("Hardware and OS Details"),
+                _("Backup"): _("Manage driver backups"),
                 _("Logs"): _("Activity and Event Logs")
             }
             subtitle = subtitles.get(title, _("Parch Driver Manager"))
@@ -736,7 +899,6 @@ class MainWindow(Adw.ApplicationWindow):
             self.stack.set_visible_child_name(title)
             self.current_category = title
 
-            # Close overlay sidebar automatically in mobile collapsed mode
             if self.split_view.get_collapsed():
                 self.split_view.set_show_sidebar(False)
 
